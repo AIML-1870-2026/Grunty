@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Specification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        snake: {
+                            green: '#22c55e',
+                            dark: '#15803d',
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-snake-bg text-gray-100 min-h-screen">
+    <div class="max-w-4xl mx-auto px-6 py-12">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-snake-green/20 rounded-2xl mb-6">
+                <svg class="w-10 h-10 text-snake-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">Snake Game Specification</h1>
+            <p class="text-gray-400 text-lg">Version 1.0 | Last Updated: January 29, 2026</p>
+        </header>
+
+        <!-- Overview -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-4">Overview</h2>
+            <p class="text-gray-300 leading-relaxed">A classic Snake game implementation where the player controls a snake that grows longer as it consumes food while avoiding collisions with walls and itself.</p>
+        </section>
+
+        <!-- Game Objectives -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-4">Game Objectives</h2>
+            <ul class="space-y-3">
+                <li class="flex items-start gap-3">
+                    <span class="w-2 h-2 bg-snake-green rounded-full mt-2 flex-shrink-0"></span>
+                    <span class="text-gray-300">Control the snake to eat food items</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="w-2 h-2 bg-snake-green rounded-full mt-2 flex-shrink-0"></span>
+                    <span class="text-gray-300">Grow the snake's length with each food consumed</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="w-2 h-2 bg-snake-green rounded-full mt-2 flex-shrink-0"></span>
+                    <span class="text-gray-300">Achieve the highest possible score</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="w-2 h-2 bg-snake-green rounded-full mt-2 flex-shrink-0"></span>
+                    <span class="text-gray-300">Avoid collisions with walls and the snake's own body</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Core Gameplay Mechanics -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-6">Core Gameplay Mechanics</h2>
+
+            <div class="space-y-8">
+                <!-- Snake Movement -->
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Snake Movement</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>The snake moves continuously in its current direction</li>
+                        <li>Movement is grid-based (discrete cells)</li>
+                        <li>The snake moves one cell per game tick</li>
+                        <li>Direction can be changed using arrow keys or WASD</li>
+                        <li>The snake cannot reverse direction (e.g., cannot go directly from right to left)</li>
+                    </ul>
+                </div>
+
+                <!-- Snake Growth -->
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Snake Growth</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Initial snake length: 3-5 segments</li>
+                        <li>Each food item consumed adds one segment to the tail</li>
+                        <li>The snake's head always leads movement</li>
+                        <li>Body segments follow the head's path</li>
+                    </ul>
+                </div>
+
+                <!-- Food System -->
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Food System</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>One food item appears on the grid at a time</li>
+                        <li>Food spawns at random unoccupied positions</li>
+                        <li>New food appears immediately after consumption</li>
+                        <li>Each food item is worth a fixed number of points (e.g., 10 points)</li>
+                    </ul>
+                </div>
+
+                <!-- Collision Detection -->
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Collision Detection</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Game ends if snake collides with any wall boundary</li>
+                        <li>Game ends if snake collides with its own body segments</li>
+                        <li>Head position is checked each frame for collisions</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game Configuration -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-6">Game Configuration</h2>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Grid -->
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Grid/Playing Field</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Recommended size: 20x20 to 30x30 cells</li>
+                        <li>Fixed boundaries (walls on all sides)</li>
+                        <li>Cell-based coordinate system</li>
+                    </ul>
+                </div>
+
+                <!-- Scoring -->
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Scoring System</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Points per food item: 10 points</li>
+                        <li>Optional: Bonus points for consecutive eating</li>
+                        <li>Optional: Multiplier based on snake length</li>
+                        <li>Display current score and high score</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Difficulty Settings -->
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold text-white mb-4">Difficulty Settings</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-snake-bg rounded-xl p-4 text-center">
+                        <div class="text-snake-green font-bold text-lg">Easy</div>
+                        <div class="text-gray-400 text-sm">8-10 FPS</div>
+                    </div>
+                    <div class="bg-snake-bg rounded-xl p-4 text-center">
+                        <div class="text-yellow-400 font-bold text-lg">Medium</div>
+                        <div class="text-gray-400 text-sm">12-15 FPS</div>
+                    </div>
+                    <div class="bg-snake-bg rounded-xl p-4 text-center">
+                        <div class="text-orange-400 font-bold text-lg">Hard</div>
+                        <div class="text-gray-400 text-sm">18-20 FPS</div>
+                    </div>
+                    <div class="bg-snake-bg rounded-xl p-4 text-center">
+                        <div class="text-red-400 font-bold text-lg">Expert</div>
+                        <div class="text-gray-400 text-sm">25+ FPS</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-6">Controls</h2>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-4">Movement</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-snake-bg rounded-lg p-3 text-center">
+                            <kbd class="bg-gray-700 px-3 py-1 rounded text-sm font-mono">Arrow Keys</kbd>
+                        </div>
+                        <div class="bg-snake-bg rounded-lg p-3 text-center">
+                            <kbd class="bg-gray-700 px-3 py-1 rounded text-sm font-mono">W A S D</kbd>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-4">Game Actions</h3>
+                    <div class="space-y-2 text-gray-300">
+                        <div><kbd class="bg-gray-700 px-2 py-1 rounded text-sm font-mono mr-2">Space</kbd> or <kbd class="bg-gray-700 px-2 py-1 rounded text-sm font-mono ml-1">P</kbd> - Pause/Unpause</div>
+                        <div><kbd class="bg-gray-700 px-2 py-1 rounded text-sm font-mono mr-2">Enter</kbd> or <kbd class="bg-gray-700 px-2 py-1 rounded text-sm font-mono ml-1">R</kbd> - Restart</div>
+                        <div><kbd class="bg-gray-700 px-2 py-1 rounded text-sm font-mono">Esc</kbd> - Main Menu</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game States -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-6">Game States</h2>
+            <div class="flex flex-wrap gap-4">
+                <div class="bg-snake-bg rounded-xl px-6 py-4 text-center">
+                    <div class="text-2xl mb-2">1</div>
+                    <div class="text-gray-300">Main Menu</div>
+                </div>
+                <div class="text-gray-500 flex items-center">&rarr;</div>
+                <div class="bg-snake-bg rounded-xl px-6 py-4 text-center">
+                    <div class="text-2xl mb-2">2</div>
+                    <div class="text-gray-300">Playing</div>
+                </div>
+                <div class="text-gray-500 flex items-center">&rarr;</div>
+                <div class="bg-snake-bg rounded-xl px-6 py-4 text-center">
+                    <div class="text-2xl mb-2">3</div>
+                    <div class="text-gray-300">Paused</div>
+                </div>
+                <div class="text-gray-500 flex items-center">&rarr;</div>
+                <div class="bg-snake-bg rounded-xl px-6 py-4 text-center">
+                    <div class="text-2xl mb-2">4</div>
+                    <div class="text-gray-300">Game Over</div>
+                </div>
+                <div class="text-gray-500 flex items-center">&rarr;</div>
+                <div class="bg-snake-bg rounded-xl px-6 py-4 text-center">
+                    <div class="text-2xl mb-2">5</div>
+                    <div class="text-gray-300">High Score</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Requirements -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-6">Technical Requirements</h2>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Performance</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Consistent frame rate based on difficulty</li>
+                        <li>Smooth snake movement without stuttering</li>
+                        <li>Responsive input handling (no input lag)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Data Persistence</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Save and load high scores</li>
+                        <li>Optional: Save difficulty preference</li>
+                        <li>Optional: Game state saving for pause/resume</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Visual Design</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Clear contrast between elements</li>
+                        <li>Smooth animations for movement</li>
+                        <li>Visual feedback for food consumption</li>
+                        <li>Game over animation/effect</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Audio (Optional)</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>Background music</li>
+                        <li>Sound effect for eating food</li>
+                        <li>Sound effect for game over</li>
+                        <li>Sound effect for menu navigation</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Future Enhancements -->
+        <section class="bg-snake-card rounded-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-snake-green mb-6">Future Enhancements</h2>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-snake-bg rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-3">Power-ups</h3>
+                    <ul class="space-y-1 text-gray-400 text-sm">
+                        <li>Speed boost</li>
+                        <li>Slow-mo</li>
+                        <li>Score multiplier</li>
+                        <li>Invincibility</li>
+                    </ul>
+                </div>
+                <div class="bg-snake-bg rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-3">Obstacles</h3>
+                    <ul class="space-y-1 text-gray-400 text-sm">
+                        <li>Static obstacles on grid</li>
+                        <li>Moving obstacles</li>
+                    </ul>
+                </div>
+                <div class="bg-snake-bg rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-3">Multiplayer</h3>
+                    <ul class="space-y-1 text-gray-400 text-sm">
+                        <li>Two-player competitive mode</li>
+                        <li>Shared grid, separate snakes</li>
+                        <li>First to crash loses</li>
+                    </ul>
+                </div>
+                <div class="bg-snake-bg rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-white mb-3">Advanced Scoring</h3>
+                    <ul class="space-y-1 text-gray-400 text-sm">
+                        <li>Combo system</li>
+                        <li>Time-based scoring</li>
+                        <li>Length-based multipliers</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Success Criteria -->
+        <section class="bg-gradient-to-r from-snake-green/20 to-snake-dark/20 rounded-2xl p-8 mb-8 border border-snake-green/30">
+            <h2 class="text-2xl font-bold text-snake-green mb-4">Success Criteria</h2>
+            <p class="text-gray-300 mb-4">A successful implementation should:</p>
+            <ul class="space-y-3">
+                <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-snake-green mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-300">Provide smooth, responsive gameplay</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-snake-green mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-300">Accurately detect all collision scenarios</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-snake-green mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-300">Maintain consistent game speed at chosen difficulty</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-snake-green mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-300">Display score and game state clearly</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-snake-green mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-300">Handle edge cases gracefully</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-snake-green mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="text-gray-300">Provide an engaging user experience</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-gray-500 text-sm">
+            <p>Snake Game Specification v1.0 | By Grunty</p>
+        </footer>
+    </div>
+</body>
+</html>
