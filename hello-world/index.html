@@ -15,28 +15,96 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(180deg,
+                #87CEEB 0%,
+                #87CEEB 50%,
+                #f4d03f 50%,
+                #e9c46a 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+        .sun {
+            position: absolute;
+            top: 40px;
+            right: 80px;
+            width: 100px;
+            height: 100px;
+            background: #f9dc5c;
+            border-radius: 50%;
+            box-shadow: 0 0 60px #f9dc5c, 0 0 100px #f9a825;
+        }
+        .ocean {
+            position: absolute;
+            bottom: 50%;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(180deg, #1e90ff 0%, #00bfff 100%);
+        }
+        .wave {
+            position: absolute;
+            bottom: 50%;
+            left: 0;
+            width: 200%;
+            height: 30px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath fill='%2300bfff' d='M0,60 C150,120 350,0 600,60 C850,120 1050,0 1200,60 L1200,120 L0,120 Z'/%3E%3C/svg%3E") repeat-x;
+            background-size: 600px 30px;
+            animation: wave 8s linear infinite;
+        }
+        .wave:nth-child(2) {
+            bottom: calc(50% + 10px);
+            opacity: 0.5;
+            animation: wave 6s linear infinite reverse;
+        }
+        @keyframes wave {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-600px); }
+        }
+        .palm {
+            position: absolute;
+            bottom: 50%;
+            left: 60px;
+            font-size: 120px;
+            transform: scaleX(-1);
         }
         .container {
             text-align: center;
-            color: white;
+            color: #1a535c;
+            z-index: 10;
+            padding: 2rem;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
         }
         h1 {
             font-size: 4rem;
             margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
         }
         p {
             font-size: 1.5rem;
-            opacity: 0.9;
+        }
+        .shells {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2rem;
+            letter-spacing: 2rem;
         }
     </style>
 </head>
 <body>
+    <div class="sun"></div>
+    <div class="ocean"></div>
+    <div class="wave"></div>
+    <div class="wave"></div>
+    <div class="palm">🌴</div>
     <div class="container">
         <h1>Hello, World!</h1>
         <p>Welcome to Grunty's AIML 1870 Portfolio</p>
     </div>
+    <div class="shells">🐚 🦀 🐚</div>
 </body>
 </html>
