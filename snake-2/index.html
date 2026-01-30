@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake 2 - Ultimate Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            color: #00ff88;
+        }
+
+        .menu {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .menu.hidden {
+            display: none;
+        }
+
+        .settings-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .settings-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .settings-group select,
+        .settings-group input[type="color"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .settings-group select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .settings-group input[type="color"] {
+            height: 50px;
+            padding: 5px;
+        }
+
+        .color-inputs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .color-inputs > div {
+            flex: 1;
+        }
+
+        .color-inputs label {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container.active {
+            display: flex;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 10px;
+            padding: 0 10px;
+        }
+
+        .score-display {
+            font-size: 1.2rem;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .player1-score {
+            color: #00ff88;
+        }
+
+        .player2-score {
+            color: #ff6b6b;
+        }
+
+        #gameCanvas {
+            border: 4px solid #00ff88;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .game-over.active {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .game-over p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .controls-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .fruit-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .fruit-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .fruit-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Snake 2</h1>
+
+        <!-- Main Menu -->
+        <div class="menu" id="mainMenu">
+            <div class="settings-group">
+                <label>Game Mode</label>
+                <select id="gameMode">
+                    <option value="single">Single Player</option>
+                    <option value="multi">Multiplayer (2 Players)</option>
+                </select>
+            </div>
+
+            <div class="settings-group">
+                <label>Snake Shape</label>
+                <select id="snakeShape">
+                    <option value="square">Square</option>
+                    <option value="circle">Circle</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="diamond">Diamond</option>
+                </select>
+            </div>
+
+            <div class="settings-group">
+                <label>Snake Colors</label>
+                <div class="color-inputs">
+                    <div>
+                        <label>Player 1</label>
+                        <input type="color" id="snake1Color" value="#00ff88">
+                    </div>
+                    <div id="player2ColorGroup">
+                        <label>Player 2</label>
+                        <input type="color" id="snake2Color" value="#ff6b6b">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <label>Game Speed</label>
+                <select id="gameSpeed">
+                    <option value="slow">Slow</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="fast">Fast</option>
+                    <option value="insane">Insane</option>
+                </select>
+            </div>
+
+            <div class="settings-group">
+                <label>Field Size</label>
+                <select id="fieldSize">
+                    <option value="small">Small (15x15)</option>
+                    <option value="medium" selected>Medium (20x20)</option>
+                    <option value="large">Large (25x25)</option>
+                    <option value="huge">Huge (30x30)</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+
+            <div class="controls-info">
+                <strong>Controls:</strong><br>
+                Player 1: Arrow Keys<br>
+                Player 2: WASD Keys<br>
+                Pause: Space Bar
+            </div>
+
+            <div class="fruit-legend">
+                <div class="fruit-item">
+                    <div class="fruit-icon" style="background: #ff4444;"></div>
+                    <span>Apple (1pt)</span>
+                </div>
+                <div class="fruit-item">
+                    <div class="fruit-icon" style="background: #ffa500;"></div>
+                    <span>Orange (2pts)</span>
+                </div>
+                <div class="fruit-item">
+                    <div class="fruit-icon" style="background: #9b59b6;"></div>
+                    <span>Grape (3pts)</span>
+                </div>
+                <div class="fruit-item">
+                    <div class="fruit-icon" style="background: #f1c40f;"></div>
+                    <span>Golden (5pts)</span>
+                </div>
+                <div class="fruit-item">
+                    <div class="fruit-icon" style="background: linear-gradient(45deg, #ff0080, #00ffff);"></div>
+                    <span>Rainbow (10pts)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Container -->
+        <div class="game-container" id="gameContainer">
+            <div class="game-header">
+                <div class="score-display player1-score">
+                    Player 1: <span id="score1">0</span>
+                </div>
+                <div class="score-display player2-score" id="score2Display" style="display: none;">
+                    Player 2: <span id="score2">0</span>
+                </div>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+            <button class="btn btn-secondary" style="margin-top: 20px;" onclick="backToMenu()">Back to Menu</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOver">
+            <h2 id="gameOverTitle">Game Over!</h2>
+            <p id="gameOverMessage"></p>
+            <button class="btn btn-primary" onclick="startGame()">Play Again</button>
+            <button class="btn btn-secondary" onclick="backToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Configuration
+        const config = {
+            speeds: {
+                slow: 150,
+                medium: 100,
+                fast: 60,
+                insane: 30
+            },
+            sizes: {
+                small: 15,
+                medium: 20,
+                large: 25,
+                huge: 30
+            },
+            cellSize: 20
+        };
+
+        // Fruit Types
+        const fruitTypes = [
+            { name: 'apple', color: '#ff4444', points: 1, probability: 0.5 },
+            { name: 'orange', color: '#ffa500', points: 2, probability: 0.25 },
+            { name: 'grape', color: '#9b59b6', points: 3, probability: 0.15 },
+            { name: 'golden', color: '#f1c40f', points: 5, probability: 0.08 },
+            { name: 'rainbow', color: null, points: 10, probability: 0.02 }
+        ];
+
+        // Game State
+        let canvas, ctx;
+        let gameLoop;
+        let isPaused = false;
+        let isGameOver = false;
+        let gridSize;
+        let gameMode;
+        let snakeShape;
+        let snake1Color, snake2Color;
+        let gameSpeed;
+
+        // Players
+        let snake1, snake2;
+        let direction1, direction2;
+        let nextDirection1, nextDirection2;
+        let score1, score2;
+
+        // Fruits
+        let fruits = [];
+
+        // Initialize
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            // Update player 2 color visibility based on game mode
+            document.getElementById('gameMode').addEventListener('change', function() {
+                document.getElementById('player2ColorGroup').style.display =
+                    this.value === 'multi' ? 'block' : 'none';
+            });
+        }
+
+        function startGame() {
+            // Get settings
+            gameMode = document.getElementById('gameMode').value;
+            snakeShape = document.getElementById('snakeShape').value;
+            snake1Color = document.getElementById('snake1Color').value;
+            snake2Color = document.getElementById('snake2Color').value;
+            gameSpeed = config.speeds[document.getElementById('gameSpeed').value];
+            gridSize = config.sizes[document.getElementById('fieldSize').value];
+
+            // Set canvas size
+            canvas.width = gridSize * config.cellSize;
+            canvas.height = gridSize * config.cellSize;
+
+            // Initialize snakes
+            const startY = Math.floor(gridSize / 2);
+            snake1 = [
+                { x: 3, y: startY },
+                { x: 2, y: startY },
+                { x: 1, y: startY }
+            ];
+            direction1 = { x: 1, y: 0 };
+            nextDirection1 = { x: 1, y: 0 };
+            score1 = 0;
+
+            if (gameMode === 'multi') {
+                snake2 = [
+                    { x: gridSize - 4, y: startY },
+                    { x: gridSize - 3, y: startY },
+                    { x: gridSize - 2, y: startY }
+                ];
+                direction2 = { x: -1, y: 0 };
+                nextDirection2 = { x: -1, y: 0 };
+                score2 = 0;
+                document.getElementById('score2Display').style.display = 'block';
+            } else {
+                snake2 = null;
+                document.getElementById('score2Display').style.display = 'none';
+            }
+
+            // Initialize fruits
+            fruits = [];
+            spawnFruit();
+            spawnFruit();
+            if (gridSize >= 20) spawnFruit();
+
+            // Update UI
+            updateScores();
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('gameContainer').classList.add('active');
+            document.getElementById('gameOver').classList.remove('active');
+
+            // Start game loop
+            isPaused = false;
+            isGameOver = false;
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(update, gameSpeed);
+        }
+
+        function update() {
+            if (isPaused || isGameOver) return;
+
+            // Update directions
+            direction1 = nextDirection1;
+            if (snake2) direction2 = nextDirection2;
+
+            // Move snakes
+            moveSnake(snake1, direction1);
+            if (snake2) moveSnake(snake2, direction2);
+
+            // Check collisions
+            if (checkCollision(snake1, snake2)) {
+                endGame(snake2 ? 'Player 2 Wins!' : 'Game Over!', `Player 1 Score: ${score1}`);
+                return;
+            }
+            if (snake2 && checkCollision(snake2, snake1)) {
+                endGame('Player 1 Wins!', `Player 1: ${score1} | Player 2: ${score2}`);
+                return;
+            }
+
+            // Check fruit collection
+            checkFruitCollection();
+
+            // Draw
+            draw();
+        }
+
+        function moveSnake(snake, direction) {
+            const head = {
+                x: snake[0].x + direction.x,
+                y: snake[0].y + direction.y
+            };
+            snake.unshift(head);
+            snake.pop();
+        }
+
+        function growSnake(snake) {
+            const tail = snake[snake.length - 1];
+            snake.push({ x: tail.x, y: tail.y });
+        }
+
+        function checkCollision(snake, otherSnake) {
+            const head = snake[0];
+
+            // Wall collision
+            if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize) {
+                return true;
+            }
+
+            // Self collision (skip head)
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+
+            // Other snake collision
+            if (otherSnake) {
+                for (let segment of otherSnake) {
+                    if (head.x === segment.x && head.y === segment.y) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function checkFruitCollection() {
+            for (let i = fruits.length - 1; i >= 0; i--) {
+                const fruit = fruits[i];
+
+                // Check snake 1
+                if (snake1[0].x === fruit.x && snake1[0].y === fruit.y) {
+                    score1 += fruit.points;
+                    for (let j = 0; j < fruit.points; j++) growSnake(snake1);
+                    fruits.splice(i, 1);
+                    spawnFruit();
+                    updateScores();
+                    continue;
+                }
+
+                // Check snake 2
+                if (snake2 && snake2[0].x === fruit.x && snake2[0].y === fruit.y) {
+                    score2 += fruit.points;
+                    for (let j = 0; j < fruit.points; j++) growSnake(snake2);
+                    fruits.splice(i, 1);
+                    spawnFruit();
+                    updateScores();
+                }
+            }
+        }
+
+        function spawnFruit() {
+            let x, y;
+            let attempts = 0;
+
+            do {
+                x = Math.floor(Math.random() * gridSize);
+                y = Math.floor(Math.random() * gridSize);
+                attempts++;
+            } while (isOccupied(x, y) && attempts < 100);
+
+            if (attempts >= 100) return;
+
+            // Select fruit type based on probability
+            const rand = Math.random();
+            let cumulative = 0;
+            let selectedFruit = fruitTypes[0];
+
+            for (let fruit of fruitTypes) {
+                cumulative += fruit.probability;
+                if (rand <= cumulative) {
+                    selectedFruit = fruit;
+                    break;
+                }
+            }
+
+            fruits.push({
+                x: x,
+                y: y,
+                type: selectedFruit.name,
+                color: selectedFruit.color,
+                points: selectedFruit.points
+            });
+        }
+
+        function isOccupied(x, y) {
+            // Check snake 1
+            for (let segment of snake1) {
+                if (segment.x === x && segment.y === y) return true;
+            }
+
+            // Check snake 2
+            if (snake2) {
+                for (let segment of snake2) {
+                    if (segment.x === x && segment.y === y) return true;
+                }
+            }
+
+            // Check fruits
+            for (let fruit of fruits) {
+                if (fruit.x === x && fruit.y === y) return true;
+            }
+
+            return false;
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= gridSize; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * config.cellSize, 0);
+                ctx.lineTo(i * config.cellSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * config.cellSize);
+                ctx.lineTo(canvas.width, i * config.cellSize);
+                ctx.stroke();
+            }
+
+            // Draw fruits
+            for (let fruit of fruits) {
+                drawFruit(fruit);
+            }
+
+            // Draw snakes
+            drawSnake(snake1, snake1Color);
+            if (snake2) drawSnake(snake2, snake2Color);
+
+            // Draw pause overlay
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        function drawSnake(snake, color) {
+            for (let i = 0; i < snake.length; i++) {
+                const segment = snake[i];
+                const x = segment.x * config.cellSize;
+                const y = segment.y * config.cellSize;
+                const size = config.cellSize - 2;
+                const isHead = i === 0;
+
+                ctx.fillStyle = isHead ? lightenColor(color, 30) : color;
+                ctx.strokeStyle = darkenColor(color, 20);
+                ctx.lineWidth = 2;
+
+                switch (snakeShape) {
+                    case 'circle':
+                        ctx.beginPath();
+                        ctx.arc(x + config.cellSize / 2, y + config.cellSize / 2, size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+
+                    case 'triangle':
+                        ctx.beginPath();
+                        ctx.moveTo(x + config.cellSize / 2, y + 2);
+                        ctx.lineTo(x + size + 1, y + size + 1);
+                        ctx.lineTo(x + 1, y + size + 1);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+
+                    case 'diamond':
+                        ctx.beginPath();
+                        ctx.moveTo(x + config.cellSize / 2, y + 1);
+                        ctx.lineTo(x + size + 1, y + config.cellSize / 2);
+                        ctx.lineTo(x + config.cellSize / 2, y + size + 1);
+                        ctx.lineTo(x + 1, y + config.cellSize / 2);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+
+                    default: // square
+                        ctx.fillRect(x + 1, y + 1, size, size);
+                        ctx.strokeRect(x + 1, y + 1, size, size);
+                }
+
+                // Draw eyes on head
+                if (isHead) {
+                    ctx.fillStyle = '#fff';
+                    const eyeSize = 4;
+                    const eyeOffset = 5;
+                    ctx.beginPath();
+                    ctx.arc(x + config.cellSize / 2 - eyeOffset, y + config.cellSize / 2 - 2, eyeSize, 0, Math.PI * 2);
+                    ctx.arc(x + config.cellSize / 2 + eyeOffset, y + config.cellSize / 2 - 2, eyeSize, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(x + config.cellSize / 2 - eyeOffset, y + config.cellSize / 2 - 2, 2, 0, Math.PI * 2);
+                    ctx.arc(x + config.cellSize / 2 + eyeOffset, y + config.cellSize / 2 - 2, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawFruit(fruit) {
+            const x = fruit.x * config.cellSize + config.cellSize / 2;
+            const y = fruit.y * config.cellSize + config.cellSize / 2;
+            const radius = config.cellSize / 2 - 3;
+
+            if (fruit.type === 'rainbow') {
+                // Rainbow fruit with gradient
+                const gradient = ctx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
+                gradient.addColorStop(0, '#ff0080');
+                gradient.addColorStop(0.25, '#ff8000');
+                gradient.addColorStop(0.5, '#ffff00');
+                gradient.addColorStop(0.75, '#00ff80');
+                gradient.addColorStop(1, '#00ffff');
+                ctx.fillStyle = gradient;
+            } else {
+                ctx.fillStyle = fruit.color;
+            }
+
+            // Draw fruit
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Shine effect
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(x - radius / 3, y - radius / 3, radius / 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw stem for apple
+            if (fruit.type === 'apple') {
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(x - 1, y - radius - 4, 3, 5);
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.ellipse(x + 4, y - radius - 2, 4, 2, 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function updateScores() {
+            document.getElementById('score1').textContent = score1;
+            if (snake2) {
+                document.getElementById('score2').textContent = score2;
+            }
+        }
+
+        function endGame(title, message) {
+            isGameOver = true;
+            clearInterval(gameLoop);
+            document.getElementById('gameOverTitle').textContent = title;
+            document.getElementById('gameOverMessage').textContent = message;
+            document.getElementById('gameOver').classList.add('active');
+        }
+
+        function backToMenu() {
+            if (gameLoop) clearInterval(gameLoop);
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('gameContainer').classList.remove('active');
+            document.getElementById('gameOver').classList.remove('active');
+        }
+
+        // Color utilities
+        function lightenColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, (num >> 16) + amt);
+            const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
+            const B = Math.min(255, (num & 0x0000FF) + amt);
+            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        function darkenColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max(0, (num >> 16) - amt);
+            const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+            const B = Math.max(0, (num & 0x0000FF) - amt);
+            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            // Pause
+            if (e.code === 'Space') {
+                e.preventDefault();
+                isPaused = !isPaused;
+                if (!isPaused) draw();
+                return;
+            }
+
+            // Player 1 controls (Arrow keys)
+            switch (e.code) {
+                case 'ArrowUp':
+                    if (direction1.y !== 1) nextDirection1 = { x: 0, y: -1 };
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    if (direction1.y !== -1) nextDirection1 = { x: 0, y: 1 };
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                    if (direction1.x !== 1) nextDirection1 = { x: -1, y: 0 };
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    if (direction1.x !== -1) nextDirection1 = { x: 1, y: 0 };
+                    e.preventDefault();
+                    break;
+            }
+
+            // Player 2 controls (WASD)
+            if (snake2) {
+                switch (e.code) {
+                    case 'KeyW':
+                        if (direction2.y !== 1) nextDirection2 = { x: 0, y: -1 };
+                        break;
+                    case 'KeyS':
+                        if (direction2.y !== -1) nextDirection2 = { x: 0, y: 1 };
+                        break;
+                    case 'KeyA':
+                        if (direction2.x !== 1) nextDirection2 = { x: -1, y: 0 };
+                        break;
+                    case 'KeyD':
+                        if (direction2.x !== -1) nextDirection2 = { x: 1, y: 0 };
+                        break;
+                }
+            }
+        });
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>
