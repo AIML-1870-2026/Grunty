@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turing Patterns - Reaction Diffusion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00d4ff, #9b59b6, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: -10px;
+        }
+
+        .main-area {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        #canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            cursor: crosshair;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .controls {
+            background: rgba(20, 20, 30, 0.9);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-group label span {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #9b59b6);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 70px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #cc4444);
+            color: #fff;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4ecdc4, #2eaa9b);
+            color: #000;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+            outline: 2px solid #00d4ff;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .preset-grid button {
+            min-width: auto;
+            padding: 8px;
+            font-size: 0.75rem;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .palette-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            min-width: auto;
+            padding: 0;
+        }
+
+        .palette-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .palette-btn.active {
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            color: #00d4ff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+
+        .brush-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 50px;
+            background: #1a1a2e;
+            border-radius: 6px;
+        }
+
+        .brush-circle {
+            border: 2px solid #00d4ff;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #666;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+
+        .tool-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 1.2rem;
+        }
+
+        .info-panel {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+
+        .info-panel strong {
+            color: #00d4ff;
+        }
+
+        .symmetry-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #1a1a2e;
+            border-radius: 6px;
+        }
+
+        .symmetry-toggle input {
+            width: 18px;
+            height: 18px;
+            accent-color: #00d4ff;
+        }
+
+        @media (max-width: 900px) {
+            .main-area {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .controls {
+                width: 100%;
+                max-width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Turing Patterns</h1>
+        <p class="subtitle">Gray-Scott Reaction-Diffusion System</p>
+
+        <div class="main-area">
+            <canvas id="canvas" width="600" height="600"></canvas>
+
+            <div class="controls">
+                <div class="section-title">Brush Tools</div>
+                <div class="tool-buttons">
+                    <button class="tool-btn btn-primary active" id="addTool" title="Add Chemical B">🎨</button>
+                    <button class="tool-btn btn-secondary" id="removeTool" title="Remove Chemical B">🧹</button>
+                    <button class="tool-btn btn-secondary" id="perturbTool" title="Perturb">💫</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Brush Size <span id="brushSizeVal">20</span></label>
+                    <input type="range" id="brushSize" min="5" max="80" value="20">
+                    <div class="brush-preview">
+                        <div class="brush-circle" id="brushPreview"></div>
+                    </div>
+                </div>
+
+                <div class="section-title">Simulation Parameters</div>
+                <div class="control-group">
+                    <label>Feed Rate (F) <span id="feedVal">0.055</span></label>
+                    <input type="range" id="feed" min="0.01" max="0.1" step="0.001" value="0.055">
+                </div>
+
+                <div class="control-group">
+                    <label>Kill Rate (K) <span id="killVal">0.062</span></label>
+                    <input type="range" id="kill" min="0.03" max="0.07" step="0.001" value="0.062">
+                </div>
+
+                <div class="control-group">
+                    <label>Speed <span id="speedVal">10</span></label>
+                    <input type="range" id="speed" min="1" max="30" value="10">
+                </div>
+
+                <div class="section-title">Pattern Presets</div>
+                <div class="preset-grid">
+                    <button class="btn-secondary" data-f="0.055" data-k="0.062">Mitosis</button>
+                    <button class="btn-secondary" data-f="0.039" data-k="0.058">Coral</button>
+                    <button class="btn-secondary" data-f="0.026" data-k="0.052">Maze</button>
+                    <button class="btn-secondary" data-f="0.014" data-k="0.054">Spots</button>
+                    <button class="btn-secondary" data-f="0.018" data-k="0.051">Worms</button>
+                    <button class="btn-secondary" data-f="0.029" data-k="0.057">Bubbles</button>
+                    <button class="btn-secondary" data-f="0.022" data-k="0.059">Waves</button>
+                    <button class="btn-secondary" data-f="0.046" data-k="0.063">Solitons</button>
+                </div>
+
+                <div class="section-title">Color Palette</div>
+                <div class="palette-grid">
+                    <button class="palette-btn active" data-palette="ocean" style="background: linear-gradient(135deg, #001133, #00d4ff)"></button>
+                    <button class="palette-btn" data-palette="fire" style="background: linear-gradient(135deg, #1a0000, #ff6b00)"></button>
+                    <button class="palette-btn" data-palette="forest" style="background: linear-gradient(135deg, #001a00, #00ff88)"></button>
+                    <button class="palette-btn" data-palette="purple" style="background: linear-gradient(135deg, #0d001a, #bf00ff)"></button>
+                    <button class="palette-btn" data-palette="sunset" style="background: linear-gradient(135deg, #1a0033, #ff6b6b)"></button>
+                    <button class="palette-btn" data-palette="mono" style="background: linear-gradient(135deg, #000, #fff)"></button>
+                    <button class="palette-btn" data-palette="neon" style="background: linear-gradient(135deg, #000, #00ff00)"></button>
+                    <button class="palette-btn" data-palette="plasma" style="background: linear-gradient(135deg, #ff00ff, #00ffff)"></button>
+                </div>
+
+                <div class="section-title">Options</div>
+                <div class="symmetry-toggle">
+                    <input type="checkbox" id="symmetry">
+                    <label for="symmetry">Mirror Symmetry (4-fold)</label>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="playPause">⏸️ Pause</button>
+                    <button class="btn-secondary" id="step">Step</button>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-danger" id="clear">Clear</button>
+                    <button class="btn-secondary" id="seed">Seed</button>
+                    <button class="btn-success" id="save">💾 Save</button>
+                </div>
+
+                <div class="info-panel">
+                    <strong>How it works:</strong> Two chemicals (A & B) react and diffuse.
+                    A feeds the system, B is the pattern-forming agent.
+                    Click to add B and watch patterns emerge!
+                </div>
+
+                <div class="stats">
+                    <span>FPS: <span id="fps">0</span></span>
+                    <span>Iterations: <span id="iterations">0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas and context
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Simulation grids (double buffered)
+        let gridA = new Float32Array(width * height);
+        let gridB = new Float32Array(width * height);
+        let nextA = new Float32Array(width * height);
+        let nextB = new Float32Array(width * height);
+
+        // Image data for rendering
+        const imageData = ctx.createImageData(width, height);
+
+        // Simulation parameters
+        let feed = 0.055;
+        let kill = 0.062;
+        let dA = 1.0;
+        let dB = 0.5;
+        let speed = 10;
+        let running = true;
+        let iterations = 0;
+
+        // Brush settings
+        let brushSize = 20;
+        let currentTool = 'add';
+        let symmetry = false;
+
+        // Color palettes
+        const palettes = {
+            ocean: { bg: [0, 17, 51], fg: [0, 212, 255], mid: [0, 100, 150] },
+            fire: { bg: [26, 0, 0], fg: [255, 107, 0], mid: [180, 50, 0] },
+            forest: { bg: [0, 26, 0], fg: [0, 255, 136], mid: [0, 100, 50] },
+            purple: { bg: [13, 0, 26], fg: [191, 0, 255], mid: [100, 0, 150] },
+            sunset: { bg: [26, 0, 51], fg: [255, 107, 107], mid: [200, 50, 100] },
+            mono: { bg: [0, 0, 0], fg: [255, 255, 255], mid: [128, 128, 128] },
+            neon: { bg: [0, 0, 0], fg: [0, 255, 0], mid: [0, 128, 0] },
+            plasma: { bg: [20, 0, 30], fg: [0, 255, 255], mid: [255, 0, 255] }
+        };
+        let currentPalette = 'ocean';
+
+        // FPS tracking
+        let lastTime = performance.now();
+        let frameCount = 0;
+
+        // Initialize grid with A=1, B=0
+        function initGrid() {
+            gridA.fill(1);
+            gridB.fill(0);
+            iterations = 0;
+        }
+
+        // Seed random spots
+        function seedRandom() {
+            const numSeeds = 15 + Math.floor(Math.random() * 10);
+            for (let i = 0; i < numSeeds; i++) {
+                const x = Math.floor(Math.random() * width);
+                const y = Math.floor(Math.random() * height);
+                const r = 5 + Math.floor(Math.random() * 15);
+                addChemical(x, y, r, 1.0);
+            }
+        }
+
+        // Add/remove chemical at position
+        function addChemical(cx, cy, radius, amount) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    if (dx * dx + dy * dy <= radius * radius) {
+                        const x = (cx + dx + width) % width;
+                        const y = (cy + dy + height) % height;
+                        const idx = y * width + x;
+
+                        if (currentTool === 'add') {
+                            gridB[idx] = Math.min(1, gridB[idx] + amount);
+                        } else if (currentTool === 'remove') {
+                            gridB[idx] = Math.max(0, gridB[idx] - amount);
+                            gridA[idx] = 1;
+                        } else if (currentTool === 'perturb') {
+                            gridA[idx] += (Math.random() - 0.5) * 0.3;
+                            gridB[idx] += (Math.random() - 0.5) * 0.3;
+                            gridA[idx] = Math.max(0, Math.min(1, gridA[idx]));
+                            gridB[idx] = Math.max(0, Math.min(1, gridB[idx]));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply brush with optional symmetry
+        function applyBrush(x, y) {
+            addChemical(x, y, brushSize, 0.5);
+
+            if (symmetry) {
+                // 4-fold mirror symmetry
+                addChemical(width - x, y, brushSize, 0.5);
+                addChemical(x, height - y, brushSize, 0.5);
+                addChemical(width - x, height - y, brushSize, 0.5);
+            }
+        }
+
+        // Laplacian calculation with optimized convolution
+        function laplacian(grid, x, y) {
+            const idx = y * width + x;
+            const left = ((x - 1 + width) % width);
+            const right = ((x + 1) % width);
+            const up = ((y - 1 + height) % height) * width;
+            const down = ((y + 1) % height) * width;
+            const row = y * width;
+
+            return (
+                grid[up + left] * 0.05 +
+                grid[up + x] * 0.2 +
+                grid[up + right] * 0.05 +
+                grid[row + left] * 0.2 +
+                grid[idx] * -1 +
+                grid[row + right] * 0.2 +
+                grid[down + left] * 0.05 +
+                grid[down + x] * 0.2 +
+                grid[down + right] * 0.05
+            );
+        }
+
+        // Simulation step
+        function simulate() {
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = y * width + x;
+                    const a = gridA[idx];
+                    const b = gridB[idx];
+
+                    const lapA = laplacian(gridA, x, y);
+                    const lapB = laplacian(gridB, x, y);
+
+                    const reaction = a * b * b;
+
+                    nextA[idx] = a + (dA * lapA - reaction + feed * (1 - a));
+                    nextB[idx] = b + (dB * lapB + reaction - (kill + feed) * b);
+
+                    // Clamp values
+                    nextA[idx] = Math.max(0, Math.min(1, nextA[idx]));
+                    nextB[idx] = Math.max(0, Math.min(1, nextB[idx]));
+                }
+            }
+
+            // Swap buffers
+            [gridA, nextA] = [nextA, gridA];
+            [gridB, nextB] = [nextB, gridB];
+
+            iterations++;
+        }
+
+        // Render to canvas
+        function render() {
+            const palette = palettes[currentPalette];
+            const data = imageData.data;
+
+            for (let i = 0; i < width * height; i++) {
+                const b = gridB[i];
+                const a = gridA[i];
+
+                // Create interesting color mixing
+                const t = Math.pow(b, 0.8);
+                const s = Math.pow(1 - a, 0.5);
+
+                const px = i * 4;
+                data[px] = palette.bg[0] + (palette.mid[0] - palette.bg[0]) * s + (palette.fg[0] - palette.mid[0]) * t;
+                data[px + 1] = palette.bg[1] + (palette.mid[1] - palette.bg[1]) * s + (palette.fg[1] - palette.mid[1]) * t;
+                data[px + 2] = palette.bg[2] + (palette.mid[2] - palette.bg[2]) * s + (palette.fg[2] - palette.mid[2]) * t;
+                data[px + 3] = 255;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Main animation loop
+        function animate() {
+            if (running) {
+                for (let i = 0; i < speed; i++) {
+                    simulate();
+                }
+            }
+
+            render();
+
+            // FPS calculation
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                document.getElementById('fps').textContent = frameCount;
+                document.getElementById('iterations').textContent = iterations;
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Mouse/touch interaction
+        let isDrawing = false;
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = width / rect.width;
+            const scaleY = height / rect.height;
+
+            if (e.touches) {
+                return {
+                    x: Math.floor((e.touches[0].clientX - rect.left) * scaleX),
+                    y: Math.floor((e.touches[0].clientY - rect.top) * scaleY)
+                };
+            }
+
+            return {
+                x: Math.floor((e.clientX - rect.left) * scaleX),
+                y: Math.floor((e.clientY - rect.top) * scaleY)
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const { x, y } = getCanvasCoords(e);
+            applyBrush(x, y);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                const { x, y } = getCanvasCoords(e);
+                applyBrush(x, y);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mouseleave', () => isDrawing = false);
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            const { x, y } = getCanvasCoords(e);
+            applyBrush(x, y);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isDrawing) {
+                const { x, y } = getCanvasCoords(e);
+                applyBrush(x, y);
+            }
+        });
+
+        canvas.addEventListener('touchend', () => isDrawing = false);
+
+        // UI Controls
+        document.getElementById('brushSize').addEventListener('input', (e) => {
+            brushSize = parseInt(e.target.value);
+            document.getElementById('brushSizeVal').textContent = brushSize;
+            updateBrushPreview();
+        });
+
+        document.getElementById('feed').addEventListener('input', (e) => {
+            feed = parseFloat(e.target.value);
+            document.getElementById('feedVal').textContent = feed.toFixed(3);
+        });
+
+        document.getElementById('kill').addEventListener('input', (e) => {
+            kill = parseFloat(e.target.value);
+            document.getElementById('killVal').textContent = kill.toFixed(3);
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            document.getElementById('speedVal').textContent = speed;
+        });
+
+        document.getElementById('symmetry').addEventListener('change', (e) => {
+            symmetry = e.target.checked;
+        });
+
+        document.getElementById('playPause').addEventListener('click', () => {
+            running = !running;
+            document.getElementById('playPause').textContent = running ? '⏸️ Pause' : '▶️ Play';
+        });
+
+        document.getElementById('step').addEventListener('click', () => {
+            if (!running) {
+                simulate();
+                render();
+            }
+        });
+
+        document.getElementById('clear').addEventListener('click', () => {
+            initGrid();
+        });
+
+        document.getElementById('seed').addEventListener('click', () => {
+            seedRandom();
+        });
+
+        document.getElementById('save').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `turing-pattern-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        // Tool buttons
+        const toolButtons = {
+            add: document.getElementById('addTool'),
+            remove: document.getElementById('removeTool'),
+            perturb: document.getElementById('perturbTool')
+        };
+
+        Object.entries(toolButtons).forEach(([tool, btn]) => {
+            btn.addEventListener('click', () => {
+                currentTool = tool;
+                Object.values(toolButtons).forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Preset buttons
+        document.querySelectorAll('.preset-grid button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                feed = parseFloat(btn.dataset.f);
+                kill = parseFloat(btn.dataset.k);
+                document.getElementById('feed').value = feed;
+                document.getElementById('kill').value = kill;
+                document.getElementById('feedVal').textContent = feed.toFixed(3);
+                document.getElementById('killVal').textContent = kill.toFixed(3);
+            });
+        });
+
+        // Palette buttons
+        document.querySelectorAll('.palette-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentPalette = btn.dataset.palette;
+                document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Brush preview
+        function updateBrushPreview() {
+            const preview = document.getElementById('brushPreview');
+            const size = Math.min(brushSize, 40);
+            preview.style.width = size + 'px';
+            preview.style.height = size + 'px';
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case ' ':
+                    e.preventDefault();
+                    running = !running;
+                    document.getElementById('playPause').textContent = running ? '⏸️ Pause' : '▶️ Play';
+                    break;
+                case 'c':
+                    initGrid();
+                    break;
+                case 's':
+                    if (!e.ctrlKey && !e.metaKey) seedRandom();
+                    break;
+                case '1':
+                    toolButtons.add.click();
+                    break;
+                case '2':
+                    toolButtons.remove.click();
+                    break;
+                case '3':
+                    toolButtons.perturb.click();
+                    break;
+                case '[':
+                    brushSize = Math.max(5, brushSize - 5);
+                    document.getElementById('brushSize').value = brushSize;
+                    document.getElementById('brushSizeVal').textContent = brushSize;
+                    updateBrushPreview();
+                    break;
+                case ']':
+                    brushSize = Math.min(80, brushSize + 5);
+                    document.getElementById('brushSize').value = brushSize;
+                    document.getElementById('brushSizeVal').textContent = brushSize;
+                    updateBrushPreview();
+                    break;
+            }
+        });
+
+        // Initialize
+        initGrid();
+        seedRandom();
+        updateBrushPreview();
+        animate();
+    </script>
+</body>
+</html>
