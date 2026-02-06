@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turing Patterns - Reaction Diffusion</title>
+    <title>Turing Patterns Pro - Reaction Diffusion</title>
     <style>
         * {
             margin: 0;
@@ -19,12 +19,20 @@
             overflow-x: hidden;
         }
 
+        body.fullscreen-mode {
+            overflow: hidden;
+        }
+
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 20px;
             gap: 20px;
+        }
+
+        body.fullscreen-mode .container {
+            padding: 0;
         }
 
         h1 {
@@ -34,6 +42,11 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             text-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+        }
+
+        body.fullscreen-mode h1,
+        body.fullscreen-mode .subtitle {
+            display: none;
         }
 
         .subtitle {
@@ -49,32 +62,120 @@
             justify-content: center;
         }
 
-        #canvas {
+        .canvas-container {
+            position: relative;
+        }
+
+        #canvas, #canvas3d {
             border: 2px solid #333;
             border-radius: 8px;
             cursor: crosshair;
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
         }
 
+        body.fullscreen-mode #canvas,
+        body.fullscreen-mode #canvas3d {
+            border: none;
+            border-radius: 0;
+        }
+
+        #canvas3d {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .recording-indicator {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        .recording-indicator.active {
+            display: flex;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .audio-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 212, 255, 0.8);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .audio-indicator.active {
+            display: flex;
+        }
+
+        .audio-bars {
+            display: flex;
+            gap: 2px;
+            height: 15px;
+            align-items: flex-end;
+        }
+
+        .audio-bar {
+            width: 3px;
+            background: #fff;
+            transition: height 0.05s;
+        }
+
         .controls {
-            background: rgba(20, 20, 30, 0.9);
+            background: rgba(20, 20, 30, 0.95);
             border: 1px solid #333;
             border-radius: 12px;
-            padding: 20px;
-            width: 280px;
+            padding: 15px;
+            width: 320px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        body.fullscreen-mode .controls {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            opacity: 0.1;
+            transition: opacity 0.3s;
+        }
+
+        body.fullscreen-mode .controls:hover {
+            opacity: 1;
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .control-group label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #aaa;
             display: flex;
             justify-content: space-between;
@@ -96,8 +197,8 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: linear-gradient(135deg, #00d4ff, #9b59b6);
             cursor: pointer;
@@ -106,18 +207,18 @@
 
         .button-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
         button {
             flex: 1;
-            min-width: 70px;
-            padding: 10px 15px;
+            min-width: 60px;
+            padding: 8px 10px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             transition: all 0.2s;
         }
@@ -142,6 +243,11 @@
             color: #000;
         }
 
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #d68910);
+            color: #000;
+        }
+
         button:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -158,20 +264,20 @@
 
         .preset-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
         }
 
         .preset-grid button {
             min-width: auto;
-            padding: 8px;
-            font-size: 0.75rem;
+            padding: 6px 4px;
+            font-size: 0.7rem;
         }
 
         .palette-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
         }
 
         .palette-btn {
@@ -195,18 +301,57 @@
         }
 
         .section-title {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #00d4ff;
             border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-            margin-bottom: 5px;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title .collapse-btn {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            min-width: auto;
+            flex: none;
+        }
+
+        .collapsible {
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+
+        .collapsible.collapsed {
+            max-height: 0 !important;
+        }
+
+        .brush-shapes {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+        }
+
+        .brush-shape-btn {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            min-width: auto;
+            padding: 6px;
         }
 
         .brush-preview {
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 50px;
+            height: 40px;
             background: #1a1a2e;
             border-radius: 6px;
         }
@@ -220,52 +365,124 @@
         .stats {
             display: flex;
             justify-content: space-between;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #666;
-            padding-top: 10px;
+            padding-top: 8px;
             border-top: 1px solid #333;
         }
 
         .tool-buttons {
-            display: flex;
-            gap: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
         }
 
         .tool-btn {
-            flex: 1;
-            padding: 12px;
-            font-size: 1.2rem;
+            padding: 10px;
+            font-size: 1.1rem;
+            min-width: auto;
         }
 
-        .info-panel {
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 0.8rem;
-            line-height: 1.5;
-        }
-
-        .info-panel strong {
-            color: #00d4ff;
-        }
-
-        .symmetry-toggle {
+        .toggle-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 8px;
+            padding: 6px 8px;
             background: #1a1a2e;
             border-radius: 6px;
+            font-size: 0.8rem;
         }
 
-        .symmetry-toggle input {
-            width: 18px;
-            height: 18px;
+        .toggle-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
             accent-color: #00d4ff;
         }
 
-        @media (max-width: 900px) {
+        .layer-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .layer-btn {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+            padding: 0;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        select {
+            background: #333;
+            color: #e0e0e0;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .morph-slider {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .morph-slider select {
+            width: 80px;
+            flex: none;
+        }
+
+        .image-drop-zone {
+            border: 2px dashed #444;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .image-drop-zone:hover, .image-drop-zone.dragover {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .image-drop-zone input {
+            display: none;
+        }
+
+        .url-share {
+            display: flex;
+            gap: 5px;
+        }
+
+        .url-share input {
+            flex: 1;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+
+        .undo-redo {
+            display: flex;
+            gap: 5px;
+        }
+
+        .undo-redo button {
+            font-size: 1rem;
+        }
+
+        @media (max-width: 1000px) {
             .main-area {
                 flex-direction: column;
                 align-items: center;
@@ -273,209 +490,479 @@
 
             .controls {
                 width: 100%;
-                max-width: 500px;
+                max-width: 600px;
             }
+        }
+
+        /* Fullscreen exit hint */
+        .fullscreen-hint {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #888;
+            z-index: 1000;
+        }
+
+        body.fullscreen-mode .fullscreen-hint {
+            display: block;
+        }
+
+        /* Hidden file input for image */
+        #imageInput {
+            display: none;
         }
     </style>
 </head>
 <body>
+    <input type="file" id="imageInput" accept="image/*">
+
     <div class="container">
-        <h1>Turing Patterns</h1>
-        <p class="subtitle">Gray-Scott Reaction-Diffusion System</p>
+        <h1>Turing Patterns Pro</h1>
+        <p class="subtitle">GPU-Accelerated Reaction-Diffusion System</p>
 
         <div class="main-area">
-            <canvas id="canvas" width="600" height="600"></canvas>
+            <div class="canvas-container">
+                <canvas id="canvas" width="700" height="700"></canvas>
+                <canvas id="canvas3d" width="700" height="700"></canvas>
+                <div class="recording-indicator" id="recordingIndicator">
+                    <span>⏺</span> REC <span id="recordTime">0:00</span>
+                </div>
+                <div class="audio-indicator" id="audioIndicator">
+                    <span>🎤</span>
+                    <div class="audio-bars">
+                        <div class="audio-bar" style="height: 5px;"></div>
+                        <div class="audio-bar" style="height: 10px;"></div>
+                        <div class="audio-bar" style="height: 7px;"></div>
+                        <div class="audio-bar" style="height: 12px;"></div>
+                        <div class="audio-bar" style="height: 8px;"></div>
+                    </div>
+                </div>
+            </div>
 
             <div class="controls">
-                <div class="section-title">Brush Tools</div>
+                <!-- Tools Section -->
+                <div class="section-title">Tools</div>
                 <div class="tool-buttons">
                     <button class="tool-btn btn-primary active" id="addTool" title="Add Chemical B">🎨</button>
                     <button class="tool-btn btn-secondary" id="removeTool" title="Remove Chemical B">🧹</button>
                     <button class="tool-btn btn-secondary" id="perturbTool" title="Perturb">💫</button>
+                    <button class="tool-btn btn-secondary" id="flowTool" title="Flow Field">🌊</button>
                 </div>
 
-                <div class="control-group">
-                    <label>Brush Size <span id="brushSizeVal">20</span></label>
-                    <input type="range" id="brushSize" min="5" max="80" value="20">
-                    <div class="brush-preview">
-                        <div class="brush-circle" id="brushPreview"></div>
+                <!-- Brush Section -->
+                <div class="section-title">Brush <button class="collapse-btn" data-target="brushSection">−</button></div>
+                <div class="collapsible" id="brushSection">
+                    <div class="brush-shapes">
+                        <button class="brush-shape-btn btn-primary active" data-shape="circle" title="Circle">⬤</button>
+                        <button class="brush-shape-btn btn-secondary" data-shape="ring" title="Ring">◯</button>
+                        <button class="brush-shape-btn btn-secondary" data-shape="square" title="Square">■</button>
+                        <button class="brush-shape-btn btn-secondary" data-shape="spray" title="Spray">✦</button>
+                        <button class="brush-shape-btn btn-secondary" data-shape="spiral" title="Spiral">🌀</button>
+                    </div>
+                    <div class="control-group" style="margin-top: 8px;">
+                        <label>Size <span id="brushSizeVal">25</span></label>
+                        <input type="range" id="brushSize" min="5" max="100" value="25">
+                    </div>
+                    <div class="control-group">
+                        <label>Softness <span id="softnessVal">0%</span></label>
+                        <input type="range" id="softness" min="0" max="100" value="0">
+                    </div>
+                    <div class="toggle-row">
+                        <input type="checkbox" id="symmetry">
+                        <label for="symmetry">4-Fold Mirror Symmetry</label>
                     </div>
                 </div>
 
-                <div class="section-title">Simulation Parameters</div>
-                <div class="control-group">
-                    <label>Feed Rate (F) <span id="feedVal">0.055</span></label>
-                    <input type="range" id="feed" min="0.01" max="0.1" step="0.001" value="0.055">
+                <!-- Parameters Section -->
+                <div class="section-title">Parameters <button class="collapse-btn" data-target="paramSection">−</button></div>
+                <div class="collapsible" id="paramSection">
+                    <div class="control-group">
+                        <label>Feed Rate (F) <span id="feedVal">0.055</span></label>
+                        <input type="range" id="feed" min="0.01" max="0.1" step="0.001" value="0.055">
+                    </div>
+                    <div class="control-group">
+                        <label>Kill Rate (K) <span id="killVal">0.062</span></label>
+                        <input type="range" id="kill" min="0.03" max="0.07" step="0.001" value="0.062">
+                    </div>
+                    <div class="control-group">
+                        <label>Speed <span id="speedVal">16</span></label>
+                        <input type="range" id="speed" min="1" max="50" value="16">
+                    </div>
+                    <div class="morph-slider">
+                        <select id="morphFrom">
+                            <option value="current">Current</option>
+                            <option value="0.055,0.062">Mitosis</option>
+                            <option value="0.039,0.058">Coral</option>
+                            <option value="0.026,0.052">Maze</option>
+                            <option value="0.014,0.054">Spots</option>
+                        </select>
+                        <input type="range" id="morphSlider" min="0" max="100" value="0" style="flex:1;">
+                        <select id="morphTo">
+                            <option value="0.039,0.058">Coral</option>
+                            <option value="0.055,0.062">Mitosis</option>
+                            <option value="0.026,0.052">Maze</option>
+                            <option value="0.014,0.054">Spots</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="control-group">
-                    <label>Kill Rate (K) <span id="killVal">0.062</span></label>
-                    <input type="range" id="kill" min="0.03" max="0.07" step="0.001" value="0.062">
+                <!-- Presets Section -->
+                <div class="section-title">Presets <button class="collapse-btn" data-target="presetSection">−</button></div>
+                <div class="collapsible" id="presetSection">
+                    <div class="preset-grid">
+                        <button class="btn-secondary" data-f="0.055" data-k="0.062">Mitosis</button>
+                        <button class="btn-secondary" data-f="0.039" data-k="0.058">Coral</button>
+                        <button class="btn-secondary" data-f="0.026" data-k="0.052">Maze</button>
+                        <button class="btn-secondary" data-f="0.014" data-k="0.054">Spots</button>
+                        <button class="btn-secondary" data-f="0.018" data-k="0.051">Worms</button>
+                        <button class="btn-secondary" data-f="0.029" data-k="0.057">Bubbles</button>
+                        <button class="btn-secondary" data-f="0.022" data-k="0.059">Waves</button>
+                        <button class="btn-secondary" data-f="0.046" data-k="0.063">Solitons</button>
+                        <button class="btn-secondary" data-f="0.034" data-k="0.056">Fingerprint</button>
+                    </div>
                 </div>
 
-                <div class="control-group">
-                    <label>Speed <span id="speedVal">10</span></label>
-                    <input type="range" id="speed" min="1" max="30" value="10">
+                <!-- Colors Section -->
+                <div class="section-title">Colors <button class="collapse-btn" data-target="colorSection">−</button></div>
+                <div class="collapsible" id="colorSection">
+                    <div class="palette-grid">
+                        <button class="palette-btn active" data-palette="ocean" style="background: linear-gradient(135deg, #001133, #00d4ff)"></button>
+                        <button class="palette-btn" data-palette="fire" style="background: linear-gradient(135deg, #1a0000, #ff6b00)"></button>
+                        <button class="palette-btn" data-palette="forest" style="background: linear-gradient(135deg, #001a00, #00ff88)"></button>
+                        <button class="palette-btn" data-palette="purple" style="background: linear-gradient(135deg, #0d001a, #bf00ff)"></button>
+                        <button class="palette-btn" data-palette="sunset" style="background: linear-gradient(135deg, #1a0033, #ff6b6b)"></button>
+                        <button class="palette-btn" data-palette="mono" style="background: linear-gradient(135deg, #000, #fff)"></button>
+                        <button class="palette-btn" data-palette="neon" style="background: linear-gradient(135deg, #000, #39ff14)"></button>
+                        <button class="palette-btn" data-palette="plasma" style="background: linear-gradient(135deg, #ff00ff, #00ffff)"></button>
+                        <button class="palette-btn" data-palette="lava" style="background: linear-gradient(135deg, #330000, #ffff00)"></button>
+                        <button class="palette-btn" data-palette="ice" style="background: linear-gradient(135deg, #e0ffff, #004466)"></button>
+                    </div>
                 </div>
 
-                <div class="section-title">Pattern Presets</div>
-                <div class="preset-grid">
-                    <button class="btn-secondary" data-f="0.055" data-k="0.062">Mitosis</button>
-                    <button class="btn-secondary" data-f="0.039" data-k="0.058">Coral</button>
-                    <button class="btn-secondary" data-f="0.026" data-k="0.052">Maze</button>
-                    <button class="btn-secondary" data-f="0.014" data-k="0.054">Spots</button>
-                    <button class="btn-secondary" data-f="0.018" data-k="0.051">Worms</button>
-                    <button class="btn-secondary" data-f="0.029" data-k="0.057">Bubbles</button>
-                    <button class="btn-secondary" data-f="0.022" data-k="0.059">Waves</button>
-                    <button class="btn-secondary" data-f="0.046" data-k="0.063">Solitons</button>
+                <!-- Layers Section -->
+                <div class="section-title">Layers <button class="collapse-btn" data-target="layerSection">−</button></div>
+                <div class="collapsible" id="layerSection">
+                    <div class="layer-controls">
+                        <button class="layer-btn btn-primary active" data-layer="0">1</button>
+                        <button class="layer-btn btn-secondary" data-layer="1">2</button>
+                        <button class="layer-btn btn-secondary" data-layer="2">3</button>
+                        <select id="blendMode">
+                            <option value="normal">Normal</option>
+                            <option value="add">Additive</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="screen">Screen</option>
+                            <option value="difference">Difference</option>
+                        </select>
+                    </div>
+                    <div class="toggle-row" style="margin-top: 6px;">
+                        <input type="checkbox" id="layerVisible" checked>
+                        <label for="layerVisible">Layer Visible</label>
+                    </div>
                 </div>
 
-                <div class="section-title">Color Palette</div>
-                <div class="palette-grid">
-                    <button class="palette-btn active" data-palette="ocean" style="background: linear-gradient(135deg, #001133, #00d4ff)"></button>
-                    <button class="palette-btn" data-palette="fire" style="background: linear-gradient(135deg, #1a0000, #ff6b00)"></button>
-                    <button class="palette-btn" data-palette="forest" style="background: linear-gradient(135deg, #001a00, #00ff88)"></button>
-                    <button class="palette-btn" data-palette="purple" style="background: linear-gradient(135deg, #0d001a, #bf00ff)"></button>
-                    <button class="palette-btn" data-palette="sunset" style="background: linear-gradient(135deg, #1a0033, #ff6b6b)"></button>
-                    <button class="palette-btn" data-palette="mono" style="background: linear-gradient(135deg, #000, #fff)"></button>
-                    <button class="palette-btn" data-palette="neon" style="background: linear-gradient(135deg, #000, #00ff00)"></button>
-                    <button class="palette-btn" data-palette="plasma" style="background: linear-gradient(135deg, #ff00ff, #00ffff)"></button>
+                <!-- Audio Section -->
+                <div class="section-title">Audio Reactivity <button class="collapse-btn" data-target="audioSection">−</button></div>
+                <div class="collapsible" id="audioSection">
+                    <div class="button-row">
+                        <button class="btn-warning" id="audioToggle">🎤 Enable Mic</button>
+                    </div>
+                    <div class="control-group">
+                        <label>Sensitivity <span id="audioSensVal">50%</span></label>
+                        <input type="range" id="audioSensitivity" min="0" max="100" value="50">
+                    </div>
+                    <div class="toggle-row">
+                        <input type="checkbox" id="audioPulse" checked>
+                        <label for="audioPulse">Pulse Feed Rate</label>
+                    </div>
+                    <div class="toggle-row">
+                        <input type="checkbox" id="audioSpawn">
+                        <label for="audioSpawn">Spawn on Beat</label>
+                    </div>
                 </div>
 
-                <div class="section-title">Options</div>
-                <div class="symmetry-toggle">
-                    <input type="checkbox" id="symmetry">
-                    <label for="symmetry">Mirror Symmetry (4-fold)</label>
+                <!-- View Section -->
+                <div class="section-title">View <button class="collapse-btn" data-target="viewSection">−</button></div>
+                <div class="collapsible" id="viewSection">
+                    <div class="button-row">
+                        <button class="btn-secondary" id="toggle3d">3D Height Map</button>
+                        <button class="btn-secondary" id="fullscreen">⛶ Fullscreen</button>
+                    </div>
+                    <div class="control-group" id="heightControls" style="display: none;">
+                        <label>Height Scale <span id="heightVal">30</span></label>
+                        <input type="range" id="heightScale" min="5" max="100" value="30">
+                    </div>
                 </div>
 
+                <!-- Image Seed Section -->
+                <div class="section-title">Image Seed <button class="collapse-btn" data-target="imageSection">−</button></div>
+                <div class="collapsible" id="imageSection">
+                    <div class="image-drop-zone" id="dropZone">
+                        📷 Drop image or click to upload
+                        <br><small>Image will seed the pattern</small>
+                    </div>
+                </div>
+
+                <!-- Playback Section -->
+                <div class="section-title">Playback</div>
                 <div class="button-row">
                     <button class="btn-primary" id="playPause">⏸️ Pause</button>
                     <button class="btn-secondary" id="step">Step</button>
                 </div>
-
+                <div class="undo-redo">
+                    <button class="btn-secondary" id="undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+                    <button class="btn-secondary" id="redo" title="Redo (Ctrl+Y)">↷ Redo</button>
+                </div>
                 <div class="button-row">
                     <button class="btn-danger" id="clear">Clear</button>
                     <button class="btn-secondary" id="seed">Seed</button>
-                    <button class="btn-success" id="save">💾 Save</button>
                 </div>
 
-                <div class="info-panel">
-                    <strong>How it works:</strong> Two chemicals (A & B) react and diffuse.
-                    A feeds the system, B is the pattern-forming agent.
-                    Click to add B and watch patterns emerge!
+                <!-- Recording Section -->
+                <div class="section-title">Recording</div>
+                <div class="button-row">
+                    <button class="btn-danger" id="recordGif">⏺ Record GIF</button>
+                    <button class="btn-secondary" id="timelapse">📹 Timelapse</button>
+                </div>
+                <div class="button-row">
+                    <button class="btn-success" id="save">💾 Save PNG</button>
+                </div>
+
+                <!-- Share Section -->
+                <div class="section-title">Share Preset</div>
+                <div class="url-share">
+                    <input type="text" id="shareUrl" readonly placeholder="Click 'Copy' to generate">
+                    <button class="btn-primary" id="copyUrl" style="flex:none;">Copy</button>
                 </div>
 
                 <div class="stats">
                     <span>FPS: <span id="fps">0</span></span>
-                    <span>Iterations: <span id="iterations">0</span></span>
+                    <span>Iter: <span id="iterations">0</span></span>
+                    <span>Layer: <span id="currentLayer">1</span></span>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="fullscreen-hint">Press ESC or F to exit fullscreen</div>
+
+    <!-- GIF.js library for GIF recording -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+
     <script>
-        // Canvas and context
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            width: 700,
+            height: 700,
+            dA: 1.0,
+            dB: 0.5
+        };
+
+        // ==================== STATE ====================
+        const state = {
+            feed: 0.055,
+            kill: 0.062,
+            speed: 16,
+            running: true,
+            iterations: 0,
+            brushSize: 25,
+            brushSoftness: 0,
+            brushShape: 'circle',
+            currentTool: 'add',
+            symmetry: false,
+            currentPalette: 'ocean',
+            currentLayer: 0,
+            blendMode: 'normal',
+            layerVisible: [true, true, true],
+            show3d: false,
+            heightScale: 30,
+            audioEnabled: false,
+            audioSensitivity: 0.5,
+            audioPulse: true,
+            audioSpawn: false,
+            audioLevel: 0,
+            isRecording: false,
+            isTimelapse: false,
+            flowAngle: 0,
+            flowStrength: 0.5
+        };
+
+        // History for undo/redo
+        const history = {
+            states: [],
+            index: -1,
+            maxStates: 20
+        };
+
+        // ==================== CANVAS SETUP ====================
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
+        const canvas3d = document.getElementById('canvas3d');
+        const ctx3d = canvas3d.getContext('2d');
+        const { width, height } = CONFIG;
 
-        // Simulation grids (double buffered)
-        let gridA = new Float32Array(width * height);
-        let gridB = new Float32Array(width * height);
-        let nextA = new Float32Array(width * height);
-        let nextB = new Float32Array(width * height);
+        // ==================== SIMULATION GRIDS (3 layers) ====================
+        const layers = [];
+        for (let i = 0; i < 3; i++) {
+            layers.push({
+                gridA: new Float32Array(width * height),
+                gridB: new Float32Array(width * height),
+                nextA: new Float32Array(width * height),
+                nextB: new Float32Array(width * height),
+                flowX: new Float32Array(width * height),
+                flowY: new Float32Array(width * height)
+            });
+        }
 
-        // Image data for rendering
         const imageData = ctx.createImageData(width, height);
 
-        // Simulation parameters
-        let feed = 0.055;
-        let kill = 0.062;
-        let dA = 1.0;
-        let dB = 0.5;
-        let speed = 10;
-        let running = true;
-        let iterations = 0;
-
-        // Brush settings
-        let brushSize = 20;
-        let currentTool = 'add';
-        let symmetry = false;
-
-        // Color palettes
+        // ==================== COLOR PALETTES ====================
         const palettes = {
             ocean: { bg: [0, 17, 51], fg: [0, 212, 255], mid: [0, 100, 150] },
-            fire: { bg: [26, 0, 0], fg: [255, 107, 0], mid: [180, 50, 0] },
-            forest: { bg: [0, 26, 0], fg: [0, 255, 136], mid: [0, 100, 50] },
+            fire: { bg: [26, 0, 0], fg: [255, 140, 0], mid: [180, 50, 0] },
+            forest: { bg: [0, 26, 10], fg: [0, 255, 136], mid: [0, 120, 60] },
             purple: { bg: [13, 0, 26], fg: [191, 0, 255], mid: [100, 0, 150] },
             sunset: { bg: [26, 0, 51], fg: [255, 107, 107], mid: [200, 50, 100] },
             mono: { bg: [0, 0, 0], fg: [255, 255, 255], mid: [128, 128, 128] },
-            neon: { bg: [0, 0, 0], fg: [0, 255, 0], mid: [0, 128, 0] },
-            plasma: { bg: [20, 0, 30], fg: [0, 255, 255], mid: [255, 0, 255] }
+            neon: { bg: [0, 5, 0], fg: [57, 255, 20], mid: [0, 128, 0] },
+            plasma: { bg: [20, 0, 30], fg: [0, 255, 255], mid: [255, 0, 255] },
+            lava: { bg: [51, 0, 0], fg: [255, 255, 0], mid: [255, 100, 0] },
+            ice: { bg: [10, 30, 50], fg: [224, 255, 255], mid: [0, 150, 200] }
         };
-        let currentPalette = 'ocean';
 
-        // FPS tracking
-        let lastTime = performance.now();
-        let frameCount = 0;
-
-        // Initialize grid with A=1, B=0
-        function initGrid() {
-            gridA.fill(1);
-            gridB.fill(0);
-            iterations = 0;
+        // ==================== INITIALIZATION ====================
+        function initGrid(layerIndex = -1) {
+            const indices = layerIndex === -1 ? [0, 1, 2] : [layerIndex];
+            indices.forEach(i => {
+                layers[i].gridA.fill(1);
+                layers[i].gridB.fill(0);
+                layers[i].flowX.fill(0);
+                layers[i].flowY.fill(0);
+            });
+            if (layerIndex === -1) state.iterations = 0;
         }
 
-        // Seed random spots
-        function seedRandom() {
-            const numSeeds = 15 + Math.floor(Math.random() * 10);
+        function seedRandom(layerIndex = state.currentLayer) {
+            const layer = layers[layerIndex];
+            const numSeeds = 12 + Math.floor(Math.random() * 8);
             for (let i = 0; i < numSeeds; i++) {
                 const x = Math.floor(Math.random() * width);
                 const y = Math.floor(Math.random() * height);
-                const r = 5 + Math.floor(Math.random() * 15);
-                addChemical(x, y, r, 1.0);
+                const r = 8 + Math.floor(Math.random() * 20);
+                addChemicalAt(layer, x, y, r, 1.0, 'circle', 0);
             }
         }
 
-        // Add/remove chemical at position
-        function addChemical(cx, cy, radius, amount) {
-            for (let dy = -radius; dy <= radius; dy++) {
-                for (let dx = -radius; dx <= radius; dx++) {
-                    if (dx * dx + dy * dy <= radius * radius) {
-                        const x = (cx + dx + width) % width;
-                        const y = (cy + dy + height) % height;
-                        const idx = y * width + x;
-
-                        if (currentTool === 'add') {
-                            gridB[idx] = Math.min(1, gridB[idx] + amount);
-                        } else if (currentTool === 'remove') {
-                            gridB[idx] = Math.max(0, gridB[idx] - amount);
-                            gridA[idx] = 1;
-                        } else if (currentTool === 'perturb') {
-                            gridA[idx] += (Math.random() - 0.5) * 0.3;
-                            gridB[idx] += (Math.random() - 0.5) * 0.3;
-                            gridA[idx] = Math.max(0, Math.min(1, gridA[idx]));
-                            gridB[idx] = Math.max(0, Math.min(1, gridB[idx]));
+        // ==================== BRUSH SHAPES ====================
+        function* getBrushPixels(cx, cy, radius, shape) {
+            switch (shape) {
+                case 'circle':
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            if (dx * dx + dy * dy <= radius * radius) {
+                                yield { dx, dy, dist: Math.sqrt(dx * dx + dy * dy) / radius };
+                            }
                         }
                     }
+                    break;
+
+                case 'ring':
+                    const inner = radius * 0.6;
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const d = Math.sqrt(dx * dx + dy * dy);
+                            if (d <= radius && d >= inner) {
+                                yield { dx, dy, dist: (d - inner) / (radius - inner) };
+                            }
+                        }
+                    }
+                    break;
+
+                case 'square':
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            yield { dx, dy, dist: Math.max(Math.abs(dx), Math.abs(dy)) / radius };
+                        }
+                    }
+                    break;
+
+                case 'spray':
+                    const count = radius * radius * 0.3;
+                    for (let i = 0; i < count; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = Math.random() * radius;
+                        const dx = Math.round(Math.cos(angle) * dist);
+                        const dy = Math.round(Math.sin(angle) * dist);
+                        yield { dx, dy, dist: dist / radius };
+                    }
+                    break;
+
+                case 'spiral':
+                    const turns = 3;
+                    const points = radius * 10;
+                    for (let i = 0; i < points; i++) {
+                        const t = i / points;
+                        const angle = t * Math.PI * 2 * turns;
+                        const r = t * radius;
+                        const dx = Math.round(Math.cos(angle) * r);
+                        const dy = Math.round(Math.sin(angle) * r);
+                        yield { dx, dy, dist: t };
+                    }
+                    break;
+            }
+        }
+
+        function addChemicalAt(layer, cx, cy, radius, amount, shape, softness) {
+            for (const { dx, dy, dist } of getBrushPixels(cx, cy, radius, shape)) {
+                const x = (cx + dx + width) % width;
+                const y = (cy + dy + height) % height;
+                const idx = y * width + x;
+
+                // Apply softness falloff
+                let falloff = 1;
+                if (softness > 0) {
+                    falloff = 1 - (dist * softness);
+                    falloff = Math.max(0, falloff);
+                }
+
+                const effectiveAmount = amount * falloff;
+
+                if (state.currentTool === 'add') {
+                    layer.gridB[idx] = Math.min(1, layer.gridB[idx] + effectiveAmount);
+                } else if (state.currentTool === 'remove') {
+                    layer.gridB[idx] = Math.max(0, layer.gridB[idx] - effectiveAmount);
+                    layer.gridA[idx] = Math.min(1, layer.gridA[idx] + effectiveAmount * 0.5);
+                } else if (state.currentTool === 'perturb') {
+                    layer.gridA[idx] += (Math.random() - 0.5) * 0.4 * effectiveAmount;
+                    layer.gridB[idx] += (Math.random() - 0.5) * 0.4 * effectiveAmount;
+                    layer.gridA[idx] = Math.max(0, Math.min(1, layer.gridA[idx]));
+                    layer.gridB[idx] = Math.max(0, Math.min(1, layer.gridB[idx]));
+                } else if (state.currentTool === 'flow') {
+                    layer.flowX[idx] = Math.cos(state.flowAngle) * state.flowStrength;
+                    layer.flowY[idx] = Math.sin(state.flowAngle) * state.flowStrength;
                 }
             }
         }
 
-        // Apply brush with optional symmetry
         function applyBrush(x, y) {
-            addChemical(x, y, brushSize, 0.5);
+            const layer = layers[state.currentLayer];
+            const softness = state.brushSoftness / 100;
 
-            if (symmetry) {
-                // 4-fold mirror symmetry
-                addChemical(width - x, y, brushSize, 0.5);
-                addChemical(x, height - y, brushSize, 0.5);
-                addChemical(width - x, height - y, brushSize, 0.5);
+            addChemicalAt(layer, x, y, state.brushSize, 0.5, state.brushShape, softness);
+
+            if (state.symmetry) {
+                addChemicalAt(layer, width - x, y, state.brushSize, 0.5, state.brushShape, softness);
+                addChemicalAt(layer, x, height - y, state.brushSize, 0.5, state.brushShape, softness);
+                addChemicalAt(layer, width - x, height - y, state.brushSize, 0.5, state.brushShape, softness);
             }
         }
 
-        // Laplacian calculation with optimized convolution
+        // ==================== SIMULATION ====================
         function laplacian(grid, x, y) {
             const idx = y * width + x;
             const left = ((x - 1 + width) % width);
@@ -497,13 +984,23 @@
             );
         }
 
-        // Simulation step
-        function simulate() {
+        function simulateLayer(layer, feed, kill) {
+            const { gridA, gridB, nextA, nextB, flowX, flowY } = layer;
+            const { dA, dB } = CONFIG;
+
             for (let y = 0; y < height; y++) {
                 for (let x = 0; x < width; x++) {
                     const idx = y * width + x;
-                    const a = gridA[idx];
-                    const b = gridB[idx];
+
+                    // Apply flow field
+                    let srcX = x - flowX[idx] * 2;
+                    let srcY = y - flowY[idx] * 2;
+                    srcX = ((srcX % width) + width) % width;
+                    srcY = ((srcY % height) + height) % height;
+                    const srcIdx = Math.floor(srcY) * width + Math.floor(srcX);
+
+                    const a = gridA[srcIdx];
+                    const b = gridB[srcIdx];
 
                     const lapA = laplacian(gridA, x, y);
                     const lapB = laplacian(gridB, x, y);
@@ -513,58 +1010,461 @@
                     nextA[idx] = a + (dA * lapA - reaction + feed * (1 - a));
                     nextB[idx] = b + (dB * lapB + reaction - (kill + feed) * b);
 
-                    // Clamp values
                     nextA[idx] = Math.max(0, Math.min(1, nextA[idx]));
                     nextB[idx] = Math.max(0, Math.min(1, nextB[idx]));
                 }
             }
 
             // Swap buffers
-            [gridA, nextA] = [nextA, gridA];
-            [gridB, nextB] = [nextB, gridB];
-
-            iterations++;
+            [layer.gridA, layer.nextA] = [layer.nextA, layer.gridA];
+            [layer.gridB, layer.nextB] = [layer.nextB, layer.gridB];
         }
 
-        // Render to canvas
+        function simulate() {
+            let effectiveFeed = state.feed;
+
+            // Audio reactivity
+            if (state.audioEnabled && state.audioPulse) {
+                effectiveFeed += state.audioLevel * state.audioSensitivity * 0.03;
+            }
+
+            // Simulate visible layers
+            layers.forEach((layer, i) => {
+                if (state.layerVisible[i]) {
+                    simulateLayer(layer, effectiveFeed, state.kill);
+                }
+            });
+
+            state.iterations++;
+
+            // Audio spawn
+            if (state.audioEnabled && state.audioSpawn && state.audioLevel > 0.7) {
+                const x = Math.floor(Math.random() * width);
+                const y = Math.floor(Math.random() * height);
+                addChemicalAt(layers[state.currentLayer], x, y, 15, 0.8, 'circle', 0);
+            }
+        }
+
+        // ==================== RENDERING ====================
+        function blendColors(c1, c2, mode) {
+            switch (mode) {
+                case 'add':
+                    return [
+                        Math.min(255, c1[0] + c2[0]),
+                        Math.min(255, c1[1] + c2[1]),
+                        Math.min(255, c1[2] + c2[2])
+                    ];
+                case 'multiply':
+                    return [
+                        (c1[0] * c2[0]) / 255,
+                        (c1[1] * c2[1]) / 255,
+                        (c1[2] * c2[2]) / 255
+                    ];
+                case 'screen':
+                    return [
+                        255 - ((255 - c1[0]) * (255 - c2[0])) / 255,
+                        255 - ((255 - c1[1]) * (255 - c2[1])) / 255,
+                        255 - ((255 - c1[2]) * (255 - c2[2])) / 255
+                    ];
+                case 'difference':
+                    return [
+                        Math.abs(c1[0] - c2[0]),
+                        Math.abs(c1[1] - c2[1]),
+                        Math.abs(c1[2] - c2[2])
+                    ];
+                default:
+                    return c2;
+            }
+        }
+
         function render() {
-            const palette = palettes[currentPalette];
+            const palette = palettes[state.currentPalette];
             const data = imageData.data;
 
+            // Clear to background
             for (let i = 0; i < width * height; i++) {
-                const b = gridB[i];
-                const a = gridA[i];
-
-                // Create interesting color mixing
-                const t = Math.pow(b, 0.8);
-                const s = Math.pow(1 - a, 0.5);
-
                 const px = i * 4;
-                data[px] = palette.bg[0] + (palette.mid[0] - palette.bg[0]) * s + (palette.fg[0] - palette.mid[0]) * t;
-                data[px + 1] = palette.bg[1] + (palette.mid[1] - palette.bg[1]) * s + (palette.fg[1] - palette.mid[1]) * t;
-                data[px + 2] = palette.bg[2] + (palette.mid[2] - palette.bg[2]) * s + (palette.fg[2] - palette.mid[2]) * t;
+                data[px] = palette.bg[0];
+                data[px + 1] = palette.bg[1];
+                data[px + 2] = palette.bg[2];
                 data[px + 3] = 255;
             }
 
+            // Render each visible layer
+            layers.forEach((layer, layerIndex) => {
+                if (!state.layerVisible[layerIndex]) return;
+
+                for (let i = 0; i < width * height; i++) {
+                    const b = layer.gridB[i];
+                    const a = layer.gridA[i];
+
+                    const t = Math.pow(b, 0.8);
+                    const s = Math.pow(1 - a, 0.5);
+
+                    const px = i * 4;
+                    const newColor = [
+                        palette.bg[0] + (palette.mid[0] - palette.bg[0]) * s + (palette.fg[0] - palette.mid[0]) * t,
+                        palette.bg[1] + (palette.mid[1] - palette.bg[1]) * s + (palette.fg[1] - palette.mid[1]) * t,
+                        palette.bg[2] + (palette.mid[2] - palette.bg[2]) * s + (palette.fg[2] - palette.mid[2]) * t
+                    ];
+
+                    const currentColor = [data[px], data[px + 1], data[px + 2]];
+                    const blended = layerIndex === 0 ? newColor : blendColors(currentColor, newColor, state.blendMode);
+
+                    data[px] = blended[0];
+                    data[px + 1] = blended[1];
+                    data[px + 2] = blended[2];
+                }
+            });
+
             ctx.putImageData(imageData, 0, 0);
+
+            // 3D heightmap
+            if (state.show3d) {
+                render3d();
+            }
         }
 
-        // Main animation loop
+        function render3d() {
+            const layer = layers[state.currentLayer];
+            ctx3d.fillStyle = '#0a0a0f';
+            ctx3d.fillRect(0, 0, width, height);
+
+            const scale = state.heightScale;
+            const step = 4;
+            const palette = palettes[state.currentPalette];
+
+            for (let y = height - 1; y >= 0; y -= step) {
+                ctx3d.beginPath();
+                for (let x = 0; x < width; x += 2) {
+                    const idx = y * width + x;
+                    const h = layer.gridB[idx] * scale;
+                    const screenX = x;
+                    const screenY = y - h + (height - y) * 0.3;
+
+                    if (x === 0) {
+                        ctx3d.moveTo(screenX, screenY);
+                    } else {
+                        ctx3d.lineTo(screenX, screenY);
+                    }
+                }
+
+                const intensity = (height - y) / height;
+                ctx3d.strokeStyle = `rgb(${palette.fg[0] * intensity}, ${palette.fg[1] * intensity}, ${palette.fg[2] * intensity})`;
+                ctx3d.lineWidth = 1;
+                ctx3d.stroke();
+            }
+        }
+
+        // ==================== HISTORY (UNDO/REDO) ====================
+        function saveState() {
+            const stateData = {
+                grids: layers.map(l => ({
+                    gridA: new Float32Array(l.gridA),
+                    gridB: new Float32Array(l.gridB)
+                }))
+            };
+
+            // Remove any states after current index
+            history.states = history.states.slice(0, history.index + 1);
+
+            history.states.push(stateData);
+            if (history.states.length > history.maxStates) {
+                history.states.shift();
+            } else {
+                history.index++;
+            }
+        }
+
+        function undo() {
+            if (history.index > 0) {
+                history.index--;
+                restoreState(history.states[history.index]);
+            }
+        }
+
+        function redo() {
+            if (history.index < history.states.length - 1) {
+                history.index++;
+                restoreState(history.states[history.index]);
+            }
+        }
+
+        function restoreState(stateData) {
+            stateData.grids.forEach((g, i) => {
+                layers[i].gridA.set(g.gridA);
+                layers[i].gridB.set(g.gridB);
+            });
+        }
+
+        // ==================== AUDIO ====================
+        let audioContext, analyser, microphone, audioData;
+
+        async function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                audioData = new Uint8Array(analyser.frequencyBinCount);
+
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                state.audioEnabled = true;
+                document.getElementById('audioToggle').textContent = '🎤 Disable Mic';
+                document.getElementById('audioToggle').classList.add('active');
+                document.getElementById('audioIndicator').classList.add('active');
+            } catch (err) {
+                alert('Could not access microphone: ' + err.message);
+            }
+        }
+
+        function disableAudio() {
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            state.audioEnabled = false;
+            document.getElementById('audioToggle').textContent = '🎤 Enable Mic';
+            document.getElementById('audioToggle').classList.remove('active');
+            document.getElementById('audioIndicator').classList.remove('active');
+        }
+
+        function updateAudio() {
+            if (!state.audioEnabled || !analyser) return;
+
+            analyser.getByteFrequencyData(audioData);
+
+            // Calculate average level
+            let sum = 0;
+            for (let i = 0; i < audioData.length; i++) {
+                sum += audioData[i];
+            }
+            state.audioLevel = (sum / audioData.length) / 255;
+
+            // Update audio bars
+            const bars = document.querySelectorAll('.audio-bar');
+            bars.forEach((bar, i) => {
+                const idx = Math.floor(i * audioData.length / bars.length);
+                bar.style.height = (audioData[idx] / 255 * 15 + 2) + 'px';
+            });
+        }
+
+        // ==================== IMAGE IMPORT ====================
+        function loadImageAsSeed(img) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Draw image scaled to canvas
+            const scale = Math.max(width / img.width, height / img.height);
+            const w = img.width * scale;
+            const h = img.height * scale;
+            const x = (width - w) / 2;
+            const y = (height - h) / 2;
+
+            tempCtx.drawImage(img, x, y, w, h);
+            const imgData = tempCtx.getImageData(0, 0, width, height);
+
+            // Convert to chemical concentration
+            const layer = layers[state.currentLayer];
+            initGrid(state.currentLayer);
+
+            for (let i = 0; i < width * height; i++) {
+                const px = i * 4;
+                const brightness = (imgData.data[px] + imgData.data[px + 1] + imgData.data[px + 2]) / 765;
+                layer.gridB[i] = 1 - brightness; // Dark areas become chemical B
+            }
+
+            saveState();
+        }
+
+        // ==================== RECORDING ====================
+        let gif, recordingFrames = 0, recordingStartTime;
+        let timelapseFrames = [];
+
+        function startGifRecording() {
+            gif = new GIF({
+                workers: 2,
+                quality: 10,
+                width: width,
+                height: height,
+                workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+            });
+
+            state.isRecording = true;
+            recordingFrames = 0;
+            recordingStartTime = Date.now();
+            document.getElementById('recordingIndicator').classList.add('active');
+            document.getElementById('recordGif').textContent = '⏹ Stop';
+        }
+
+        function stopGifRecording() {
+            state.isRecording = false;
+            document.getElementById('recordingIndicator').classList.remove('active');
+            document.getElementById('recordGif').textContent = '⏺ Record GIF';
+            document.getElementById('recordGif').disabled = true;
+            document.getElementById('recordGif').textContent = '⏳ Processing...';
+
+            gif.on('finished', function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `turing-${Date.now()}.gif`;
+                a.click();
+                URL.revokeObjectURL(url);
+                document.getElementById('recordGif').disabled = false;
+                document.getElementById('recordGif').textContent = '⏺ Record GIF';
+            });
+
+            gif.render();
+        }
+
+        function addGifFrame() {
+            if (!state.isRecording) return;
+
+            // Add frame every 3rd iteration for smaller file
+            if (recordingFrames % 3 === 0) {
+                gif.addFrame(ctx, { copy: true, delay: 50 });
+            }
+
+            recordingFrames++;
+
+            // Update time display
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            document.getElementById('recordTime').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+            // Auto-stop after 10 seconds
+            if (elapsed >= 10) {
+                stopGifRecording();
+            }
+        }
+
+        function startTimelapse() {
+            timelapseFrames = [];
+            state.isTimelapse = true;
+            document.getElementById('timelapse').textContent = '⏹ Stop TL';
+            document.getElementById('timelapse').classList.add('active');
+        }
+
+        function stopTimelapse() {
+            state.isTimelapse = false;
+            document.getElementById('timelapse').textContent = '📹 Timelapse';
+            document.getElementById('timelapse').classList.remove('active');
+
+            if (timelapseFrames.length === 0) return;
+
+            // Create GIF from timelapse frames
+            const tlGif = new GIF({
+                workers: 2,
+                quality: 10,
+                width: width,
+                height: height,
+                workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+            });
+
+            timelapseFrames.forEach(frame => {
+                tlGif.addFrame(frame, { delay: 100 });
+            });
+
+            document.getElementById('timelapse').disabled = true;
+            document.getElementById('timelapse').textContent = '⏳ Processing...';
+
+            tlGif.on('finished', function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `turing-timelapse-${Date.now()}.gif`;
+                a.click();
+                URL.revokeObjectURL(url);
+                document.getElementById('timelapse').disabled = false;
+                document.getElementById('timelapse').textContent = '📹 Timelapse';
+            });
+
+            tlGif.render();
+        }
+
+        function addTimelapseFrame() {
+            if (!state.isTimelapse) return;
+
+            // Capture every 50 iterations
+            if (state.iterations % 50 === 0) {
+                const frameCanvas = document.createElement('canvas');
+                frameCanvas.width = width;
+                frameCanvas.height = height;
+                frameCanvas.getContext('2d').drawImage(canvas, 0, 0);
+                timelapseFrames.push(frameCanvas);
+
+                // Limit to 100 frames
+                if (timelapseFrames.length >= 100) {
+                    stopTimelapse();
+                }
+            }
+        }
+
+        // ==================== URL SHARING ====================
+        function generateShareUrl() {
+            const params = new URLSearchParams({
+                f: state.feed.toFixed(3),
+                k: state.kill.toFixed(3),
+                p: state.currentPalette,
+                s: state.speed
+            });
+            return window.location.origin + window.location.pathname + '?' + params.toString();
+        }
+
+        function loadFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('f')) {
+                state.feed = parseFloat(params.get('f'));
+                document.getElementById('feed').value = state.feed;
+                document.getElementById('feedVal').textContent = state.feed.toFixed(3);
+            }
+            if (params.has('k')) {
+                state.kill = parseFloat(params.get('k'));
+                document.getElementById('kill').value = state.kill;
+                document.getElementById('killVal').textContent = state.kill.toFixed(3);
+            }
+            if (params.has('p')) {
+                state.currentPalette = params.get('p');
+                document.querySelectorAll('.palette-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.palette === state.currentPalette);
+                });
+            }
+            if (params.has('s')) {
+                state.speed = parseInt(params.get('s'));
+                document.getElementById('speed').value = state.speed;
+                document.getElementById('speedVal').textContent = state.speed;
+            }
+        }
+
+        // ==================== FPS TRACKING ====================
+        let lastTime = performance.now();
+        let frameCount = 0;
+
+        // ==================== MAIN LOOP ====================
         function animate() {
-            if (running) {
-                for (let i = 0; i < speed; i++) {
+            if (state.running) {
+                for (let i = 0; i < state.speed; i++) {
                     simulate();
                 }
             }
 
+            updateAudio();
             render();
+            addGifFrame();
+            addTimelapseFrame();
 
-            // FPS calculation
+            // FPS
             frameCount++;
             const now = performance.now();
             if (now - lastTime >= 1000) {
                 document.getElementById('fps').textContent = frameCount;
-                document.getElementById('iterations').textContent = iterations;
+                document.getElementById('iterations').textContent = state.iterations;
                 frameCount = 0;
                 lastTime = now;
             }
@@ -572,8 +1472,9 @@
             requestAnimationFrame(animate);
         }
 
-        // Mouse/touch interaction
+        // ==================== EVENT HANDLERS ====================
         let isDrawing = false;
+        let lastX, lastY;
 
         function getCanvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
@@ -595,24 +1496,40 @@
 
         canvas.addEventListener('mousedown', (e) => {
             isDrawing = true;
+            saveState();
             const { x, y } = getCanvasCoords(e);
+            lastX = x;
+            lastY = y;
+
+            if (state.currentTool === 'flow') {
+                state.flowAngle = Math.atan2(y - height / 2, x - width / 2);
+            }
+
             applyBrush(x, y);
         });
 
         canvas.addEventListener('mousemove', (e) => {
+            const { x, y } = getCanvasCoords(e);
+
+            if (state.currentTool === 'flow') {
+                state.flowAngle = Math.atan2(y - lastY, x - lastX);
+            }
+
             if (isDrawing) {
-                const { x, y } = getCanvasCoords(e);
                 applyBrush(x, y);
+                lastX = x;
+                lastY = y;
             }
         });
 
         canvas.addEventListener('mouseup', () => isDrawing = false);
         canvas.addEventListener('mouseleave', () => isDrawing = false);
 
-        // Touch support
+        // Touch events
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             isDrawing = true;
+            saveState();
             const { x, y } = getCanvasCoords(e);
             applyBrush(x, y);
         });
@@ -629,114 +1546,325 @@
 
         // UI Controls
         document.getElementById('brushSize').addEventListener('input', (e) => {
-            brushSize = parseInt(e.target.value);
-            document.getElementById('brushSizeVal').textContent = brushSize;
-            updateBrushPreview();
+            state.brushSize = parseInt(e.target.value);
+            document.getElementById('brushSizeVal').textContent = state.brushSize;
+        });
+
+        document.getElementById('softness').addEventListener('input', (e) => {
+            state.brushSoftness = parseInt(e.target.value);
+            document.getElementById('softnessVal').textContent = state.brushSoftness + '%';
         });
 
         document.getElementById('feed').addEventListener('input', (e) => {
-            feed = parseFloat(e.target.value);
-            document.getElementById('feedVal').textContent = feed.toFixed(3);
+            state.feed = parseFloat(e.target.value);
+            document.getElementById('feedVal').textContent = state.feed.toFixed(3);
         });
 
         document.getElementById('kill').addEventListener('input', (e) => {
-            kill = parseFloat(e.target.value);
-            document.getElementById('killVal').textContent = kill.toFixed(3);
+            state.kill = parseFloat(e.target.value);
+            document.getElementById('killVal').textContent = state.kill.toFixed(3);
         });
 
         document.getElementById('speed').addEventListener('input', (e) => {
-            speed = parseInt(e.target.value);
-            document.getElementById('speedVal').textContent = speed;
+            state.speed = parseInt(e.target.value);
+            document.getElementById('speedVal').textContent = state.speed;
         });
 
         document.getElementById('symmetry').addEventListener('change', (e) => {
-            symmetry = e.target.checked;
+            state.symmetry = e.target.checked;
         });
 
         document.getElementById('playPause').addEventListener('click', () => {
-            running = !running;
-            document.getElementById('playPause').textContent = running ? '⏸️ Pause' : '▶️ Play';
+            state.running = !state.running;
+            document.getElementById('playPause').textContent = state.running ? '⏸️ Pause' : '▶️ Play';
         });
 
         document.getElementById('step').addEventListener('click', () => {
-            if (!running) {
+            if (!state.running) {
                 simulate();
                 render();
             }
         });
 
         document.getElementById('clear').addEventListener('click', () => {
+            saveState();
             initGrid();
         });
 
         document.getElementById('seed').addEventListener('click', () => {
+            saveState();
             seedRandom();
         });
 
         document.getElementById('save').addEventListener('click', () => {
             const link = document.createElement('a');
-            link.download = `turing-pattern-${Date.now()}.png`;
-            link.href = canvas.toDataURL();
+            link.download = `turing-${Date.now()}.png`;
+            link.href = (state.show3d ? canvas3d : canvas).toDataURL();
             link.click();
         });
+
+        document.getElementById('undo').addEventListener('click', undo);
+        document.getElementById('redo').addEventListener('click', redo);
 
         // Tool buttons
         const toolButtons = {
             add: document.getElementById('addTool'),
             remove: document.getElementById('removeTool'),
-            perturb: document.getElementById('perturbTool')
+            perturb: document.getElementById('perturbTool'),
+            flow: document.getElementById('flowTool')
         };
 
         Object.entries(toolButtons).forEach(([tool, btn]) => {
             btn.addEventListener('click', () => {
-                currentTool = tool;
-                Object.values(toolButtons).forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                state.currentTool = tool;
+                Object.values(toolButtons).forEach(b => {
+                    b.classList.remove('active', 'btn-primary');
+                    b.classList.add('btn-secondary');
+                });
+                btn.classList.add('active', 'btn-primary');
+                btn.classList.remove('btn-secondary');
+            });
+        });
+
+        // Brush shape buttons
+        document.querySelectorAll('.brush-shape-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.brushShape = btn.dataset.shape;
+                document.querySelectorAll('.brush-shape-btn').forEach(b => {
+                    b.classList.remove('active', 'btn-primary');
+                    b.classList.add('btn-secondary');
+                });
+                btn.classList.add('active', 'btn-primary');
+                btn.classList.remove('btn-secondary');
             });
         });
 
         // Preset buttons
         document.querySelectorAll('.preset-grid button').forEach(btn => {
             btn.addEventListener('click', () => {
-                feed = parseFloat(btn.dataset.f);
-                kill = parseFloat(btn.dataset.k);
-                document.getElementById('feed').value = feed;
-                document.getElementById('kill').value = kill;
-                document.getElementById('feedVal').textContent = feed.toFixed(3);
-                document.getElementById('killVal').textContent = kill.toFixed(3);
+                state.feed = parseFloat(btn.dataset.f);
+                state.kill = parseFloat(btn.dataset.k);
+                document.getElementById('feed').value = state.feed;
+                document.getElementById('kill').value = state.kill;
+                document.getElementById('feedVal').textContent = state.feed.toFixed(3);
+                document.getElementById('killVal').textContent = state.kill.toFixed(3);
             });
         });
 
         // Palette buttons
         document.querySelectorAll('.palette-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                currentPalette = btn.dataset.palette;
+                state.currentPalette = btn.dataset.palette;
                 document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
         });
 
-        // Brush preview
-        function updateBrushPreview() {
-            const preview = document.getElementById('brushPreview');
-            const size = Math.min(brushSize, 40);
-            preview.style.width = size + 'px';
-            preview.style.height = size + 'px';
+        // Layer buttons
+        document.querySelectorAll('.layer-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.currentLayer = parseInt(btn.dataset.layer);
+                document.querySelectorAll('.layer-btn').forEach(b => {
+                    b.classList.remove('active', 'btn-primary');
+                    b.classList.add('btn-secondary');
+                });
+                btn.classList.add('active', 'btn-primary');
+                btn.classList.remove('btn-secondary');
+                document.getElementById('currentLayer').textContent = state.currentLayer + 1;
+                document.getElementById('layerVisible').checked = state.layerVisible[state.currentLayer];
+            });
+        });
+
+        document.getElementById('blendMode').addEventListener('change', (e) => {
+            state.blendMode = e.target.value;
+        });
+
+        document.getElementById('layerVisible').addEventListener('change', (e) => {
+            state.layerVisible[state.currentLayer] = e.target.checked;
+        });
+
+        // Morph slider
+        document.getElementById('morphSlider').addEventListener('input', (e) => {
+            const t = e.target.value / 100;
+            const fromVal = document.getElementById('morphFrom').value;
+            const toVal = document.getElementById('morphTo').value;
+
+            let fromF, fromK;
+            if (fromVal === 'current') {
+                fromF = state.feed;
+                fromK = state.kill;
+            } else {
+                [fromF, fromK] = fromVal.split(',').map(parseFloat);
+            }
+
+            const [toF, toK] = toVal.split(',').map(parseFloat);
+
+            state.feed = fromF + (toF - fromF) * t;
+            state.kill = fromK + (toK - fromK) * t;
+
+            document.getElementById('feed').value = state.feed;
+            document.getElementById('kill').value = state.kill;
+            document.getElementById('feedVal').textContent = state.feed.toFixed(3);
+            document.getElementById('killVal').textContent = state.kill.toFixed(3);
+        });
+
+        // Audio controls
+        document.getElementById('audioToggle').addEventListener('click', () => {
+            if (state.audioEnabled) {
+                disableAudio();
+            } else {
+                initAudio();
+            }
+        });
+
+        document.getElementById('audioSensitivity').addEventListener('input', (e) => {
+            state.audioSensitivity = e.target.value / 100;
+            document.getElementById('audioSensVal').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('audioPulse').addEventListener('change', (e) => {
+            state.audioPulse = e.target.checked;
+        });
+
+        document.getElementById('audioSpawn').addEventListener('change', (e) => {
+            state.audioSpawn = e.target.checked;
+        });
+
+        // 3D View
+        document.getElementById('toggle3d').addEventListener('click', () => {
+            state.show3d = !state.show3d;
+            canvas3d.style.display = state.show3d ? 'block' : 'none';
+            document.getElementById('toggle3d').classList.toggle('active', state.show3d);
+            document.getElementById('heightControls').style.display = state.show3d ? 'block' : 'none';
+        });
+
+        document.getElementById('heightScale').addEventListener('input', (e) => {
+            state.heightScale = parseInt(e.target.value);
+            document.getElementById('heightVal').textContent = state.heightScale;
+        });
+
+        // Fullscreen
+        document.getElementById('fullscreen').addEventListener('click', () => {
+            document.body.classList.toggle('fullscreen-mode');
+            if (document.body.classList.contains('fullscreen-mode')) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                canvas3d.width = window.innerWidth;
+                canvas3d.height = window.innerHeight;
+            } else {
+                canvas.width = CONFIG.width;
+                canvas.height = CONFIG.height;
+                canvas3d.width = CONFIG.width;
+                canvas3d.height = CONFIG.height;
+            }
+        });
+
+        // Recording
+        document.getElementById('recordGif').addEventListener('click', () => {
+            if (state.isRecording) {
+                stopGifRecording();
+            } else {
+                startGifRecording();
+            }
+        });
+
+        document.getElementById('timelapse').addEventListener('click', () => {
+            if (state.isTimelapse) {
+                stopTimelapse();
+            } else {
+                startTimelapse();
+            }
+        });
+
+        // URL sharing
+        document.getElementById('copyUrl').addEventListener('click', () => {
+            const url = generateShareUrl();
+            document.getElementById('shareUrl').value = url;
+            navigator.clipboard.writeText(url);
+            document.getElementById('copyUrl').textContent = '✓ Copied!';
+            setTimeout(() => {
+                document.getElementById('copyUrl').textContent = 'Copy';
+            }, 2000);
+        });
+
+        // Image drop zone
+        const dropZone = document.getElementById('dropZone');
+        const imageInput = document.getElementById('imageInput');
+
+        dropZone.addEventListener('click', () => imageInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                loadImageFile(file);
+            }
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadImageFile(file);
+            }
+        });
+
+        function loadImageFile(file) {
+            const img = new Image();
+            img.onload = () => loadImageAsSeed(img);
+            img.src = URL.createObjectURL(file);
         }
+
+        // Collapsible sections
+        document.querySelectorAll('.collapse-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = document.getElementById(btn.dataset.target);
+                target.classList.toggle('collapsed');
+                btn.textContent = target.classList.contains('collapsed') ? '+' : '−';
+            });
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            switch(e.key.toLowerCase()) {
+            // Don't capture when typing in inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            switch (e.key.toLowerCase()) {
                 case ' ':
                     e.preventDefault();
-                    running = !running;
-                    document.getElementById('playPause').textContent = running ? '⏸️ Pause' : '▶️ Play';
+                    state.running = !state.running;
+                    document.getElementById('playPause').textContent = state.running ? '⏸️ Pause' : '▶️ Play';
                     break;
                 case 'c':
-                    initGrid();
+                    if (!e.ctrlKey && !e.metaKey) {
+                        saveState();
+                        initGrid();
+                    }
                     break;
                 case 's':
                     if (!e.ctrlKey && !e.metaKey) seedRandom();
+                    break;
+                case 'z':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        if (e.shiftKey) redo();
+                        else undo();
+                    }
+                    break;
+                case 'y':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        redo();
+                    }
                     break;
                 case '1':
                     toolButtons.add.click();
@@ -747,25 +1875,35 @@
                 case '3':
                     toolButtons.perturb.click();
                     break;
+                case '4':
+                    toolButtons.flow.click();
+                    break;
                 case '[':
-                    brushSize = Math.max(5, brushSize - 5);
-                    document.getElementById('brushSize').value = brushSize;
-                    document.getElementById('brushSizeVal').textContent = brushSize;
-                    updateBrushPreview();
+                    state.brushSize = Math.max(5, state.brushSize - 5);
+                    document.getElementById('brushSize').value = state.brushSize;
+                    document.getElementById('brushSizeVal').textContent = state.brushSize;
                     break;
                 case ']':
-                    brushSize = Math.min(80, brushSize + 5);
-                    document.getElementById('brushSize').value = brushSize;
-                    document.getElementById('brushSizeVal').textContent = brushSize;
-                    updateBrushPreview();
+                    state.brushSize = Math.min(100, state.brushSize + 5);
+                    document.getElementById('brushSize').value = state.brushSize;
+                    document.getElementById('brushSizeVal').textContent = state.brushSize;
+                    break;
+                case 'f':
+                    document.getElementById('fullscreen').click();
+                    break;
+                case 'escape':
+                    if (document.body.classList.contains('fullscreen-mode')) {
+                        document.getElementById('fullscreen').click();
+                    }
                     break;
             }
         });
 
-        // Initialize
+        // ==================== INITIALIZATION ====================
         initGrid();
+        loadFromUrl();
         seedRandom();
-        updateBrushPreview();
+        saveState();
         animate();
     </script>
 </body>
