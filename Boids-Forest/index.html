@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Forest Boids - Predator & Prey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(20, 20, 40, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: #fff;
+            width: 280px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(100, 200, 100, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #controls h2 {
+            color: #7fff7f;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 1px solid rgba(100, 200, 100, 0.3);
+            padding-bottom: 8px;
+        }
+
+        #controls h3 {
+            color: #aaffaa;
+            margin: 15px 0 10px 0;
+            font-size: 14px;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(100, 200, 100, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #7fff7f;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .value-display {
+            float: right;
+            color: #7fff7f;
+            font-size: 11px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 70px;
+        }
+
+        .btn-primary {
+            background: #4a9f4a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5fbf5f;
+        }
+
+        .btn-secondary {
+            background: #3a5a7a;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4a7a9a;
+        }
+
+        .btn-danger {
+            background: #9f4a4a;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #bf5f5f;
+        }
+
+        .preset-btn {
+            background: rgba(100, 150, 200, 0.3);
+            color: #aaccff;
+            border: 1px solid rgba(100, 150, 200, 0.5);
+        }
+
+        .preset-btn:hover {
+            background: rgba(100, 150, 200, 0.5);
+        }
+
+        .preset-btn.active {
+            background: rgba(100, 200, 150, 0.4);
+            border-color: #7fff7f;
+            color: #7fff7f;
+        }
+
+        #instruments {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 40, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: #fff;
+            width: 200px;
+            border: 1px solid rgba(100, 200, 100, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #instruments h2 {
+            color: #7fff7f;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(100, 200, 100, 0.3);
+            padding-bottom: 8px;
+        }
+
+        .instrument {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .instrument-label {
+            color: #aaa;
+        }
+
+        .instrument-value {
+            color: #7fff7f;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        #legend {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(20, 20, 40, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: #fff;
+            border: 1px solid rgba(100, 200, 100, 0.3);
+        }
+
+        #legend h3 {
+            color: #7fff7f;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(20, 20, 40, 0.9);
+            padding: 12px;
+            border-radius: 10px;
+            color: #aaa;
+            font-size: 11px;
+            border: 1px solid rgba(100, 200, 100, 0.3);
+        }
+
+        #instructions strong {
+            color: #7fff7f;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 200, 100, 0.4);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="controls">
+        <h2>🌲 Forest Boids Control</h2>
+
+        <h3>Simulation</h3>
+        <div class="btn-group">
+            <button class="btn btn-primary" id="pauseBtn">⏸ Pause</button>
+            <button class="btn btn-secondary" id="resetBtn">🔄 Reset</button>
+        </div>
+
+        <h3>Presets</h3>
+        <div class="btn-group">
+            <button class="btn preset-btn" id="presetSchooling">Schooling</button>
+            <button class="btn preset-btn" id="presetChaotic">Chaotic</button>
+            <button class="btn preset-btn" id="presetTight">Tight</button>
+        </div>
+
+        <h3>Boid Behavior</h3>
+        <div class="control-group">
+            <label>Separation Weight <span class="value-display" id="sepVal">1.5</span></label>
+            <input type="range" id="separation" min="0" max="5" step="0.1" value="1.5">
+        </div>
+        <div class="control-group">
+            <label>Alignment Weight <span class="value-display" id="aliVal">1.0</span></label>
+            <input type="range" id="alignment" min="0" max="5" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label>Cohesion Weight <span class="value-display" id="cohVal">1.0</span></label>
+            <input type="range" id="cohesion" min="0" max="5" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label>Neighbor Radius <span class="value-display" id="radVal">50</span></label>
+            <input type="range" id="radius" min="10" max="150" step="5" value="50">
+        </div>
+        <div class="control-group">
+            <label>Max Speed <span class="value-display" id="speedVal">4.0</span></label>
+            <input type="range" id="maxSpeed" min="1" max="10" step="0.5" value="4.0">
+        </div>
+
+        <h3>Predator Settings</h3>
+        <div class="control-group">
+            <label>Predator Speed <span class="value-display" id="predSpeedVal">5.0</span></label>
+            <input type="range" id="predatorSpeed" min="2" max="12" step="0.5" value="5.0">
+        </div>
+        <div class="control-group">
+            <label>Fear Radius <span class="value-display" id="fearVal">80</span></label>
+            <input type="range" id="fearRadius" min="20" max="200" step="10" value="80">
+        </div>
+
+        <h3>Mouse Interaction</h3>
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="mouseAttract">🧲 Attract</button>
+            <button class="btn btn-danger" id="mouseRepel">💨 Repel</button>
+            <button class="btn btn-primary" id="mouseNone">🚫 None</button>
+        </div>
+        <div class="control-group">
+            <label>Mouse Force <span class="value-display" id="mouseForceVal">2.0</span></label>
+            <input type="range" id="mouseForce" min="0.5" max="10" step="0.5" value="2.0">
+        </div>
+
+        <h3>Population</h3>
+        <div class="control-group">
+            <label>Prey Count <span class="value-display" id="preyCountVal">80</span></label>
+            <input type="range" id="preyCount" min="10" max="200" step="10" value="80">
+        </div>
+        <div class="control-group">
+            <label>Predator Count <span class="value-display" id="predCountVal">3</span></label>
+            <input type="range" id="predatorCount" min="0" max="10" step="1" value="3">
+        </div>
+    </div>
+
+    <div id="instruments">
+        <h2>📊 Instruments</h2>
+        <div class="instrument">
+            <span class="instrument-label">FPS:</span>
+            <span class="instrument-value" id="fps">60</span>
+        </div>
+        <div class="instrument">
+            <span class="instrument-label">Boid Count:</span>
+            <span class="instrument-value" id="boidCount">0</span>
+        </div>
+        <div class="instrument">
+            <span class="instrument-label">Avg Speed:</span>
+            <span class="instrument-value" id="avgSpeed">0.0</span>
+        </div>
+        <div class="instrument">
+            <span class="instrument-label">Avg Neighbors:</span>
+            <span class="instrument-value" id="avgNeighbors">0.0</span>
+        </div>
+    </div>
+
+    <div id="legend">
+        <h3>🦁 Animals</h3>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #4a9fff;"></div>
+            <span>Bluebirds (Prey)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffaa33;"></div>
+            <span>Butterflies (Prey)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #88cc44;"></div>
+            <span>Fireflies (Prey)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ff4444;"></div>
+            <span>Hawks (Predator)</span>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <strong>Controls:</strong> Click & drag to rotate | Scroll to zoom<br>
+        <strong>Mouse Mode:</strong> Select attract/repel and move cursor
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============================================
+        // 3D FOREST BOIDS SIMULATION
+        // With Predator/Prey Dynamics
+        // ============================================
+
+        // Scene Setup
+        let scene, camera, renderer;
+        let boids = [];
+        let predators = [];
+        let trees = [];
+        let ground;
+        let isPaused = false;
+        let mouseMode = 'none'; // 'attract', 'repel', 'none'
+        let mouse3D = new THREE.Vector3();
+        let raycaster = new THREE.Raycaster();
+        let mouse2D = new THREE.Vector2();
+
+        // Simulation Parameters
+        const params = {
+            separation: 1.5,
+            alignment: 1.0,
+            cohesion: 1.0,
+            neighborRadius: 50,
+            maxSpeed: 4.0,
+            predatorSpeed: 5.0,
+            fearRadius: 80,
+            mouseForce: 2.0,
+            preyCount: 80,
+            predatorCount: 3
+        };
+
+        // Bounds
+        const BOUNDS = {
+            x: 200,
+            y: 100,
+            z: 200
+        };
+
+        // FPS Tracking
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // Animal Types
+        const ANIMAL_TYPES = {
+            BLUEBIRD: { color: 0x4a9fff, size: 2, wingSpan: 4 },
+            BUTTERFLY: { color: 0xffaa33, size: 1.5, wingSpan: 3 },
+            FIREFLY: { color: 0x88cc44, size: 1, wingSpan: 0, glow: true },
+            HAWK: { color: 0xff4444, size: 4, wingSpan: 8, isPredator: true }
+        };
+
+        // Initialize
+        init();
+        animate();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 100, 500);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 80, 200);
+            camera.lookAt(0, 30, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(100, 150, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 500;
+            sunLight.shadow.camera.left = -200;
+            sunLight.shadow.camera.right = 200;
+            sunLight.shadow.camera.top = 200;
+            sunLight.shadow.camera.bottom = -200;
+            scene.add(sunLight);
+
+            const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x3d5c3d, 0.4);
+            scene.add(hemisphereLight);
+
+            // Create Environment
+            createGround();
+            createForest();
+            createBoids();
+            createPredators();
+
+            // Event Listeners
+            setupEventListeners();
+            setupControls();
+
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(600, 600, 50, 50);
+
+            // Add some height variation
+            const vertices = groundGeometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                vertices[i + 2] = Math.random() * 3;
+            }
+            groundGeometry.computeVertexNormals();
+
+            const groundMaterial = new THREE.MeshLambertMaterial({
+                color: 0x3d5c3d,
+                side: THREE.DoubleSide
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Add grass patches
+            for (let i = 0; i < 100; i++) {
+                const grassGeometry = new THREE.ConeGeometry(0.5, 3, 4);
+                const grassMaterial = new THREE.MeshLambertMaterial({
+                    color: new THREE.Color().setHSL(0.3, 0.6, 0.3 + Math.random() * 0.2)
+                });
+                const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+                grass.position.set(
+                    (Math.random() - 0.5) * 400,
+                    1.5,
+                    (Math.random() - 0.5) * 400
+                );
+                scene.add(grass);
+            }
+        }
+
+        function createTree(x, z) {
+            const tree = new THREE.Group();
+
+            // Trunk
+            const trunkHeight = 15 + Math.random() * 20;
+            const trunkGeometry = new THREE.CylinderGeometry(2, 3, trunkHeight, 8);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x4a3728 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = trunkHeight / 2;
+            trunk.castShadow = true;
+            tree.add(trunk);
+
+            // Foliage layers
+            const foliageColor = new THREE.Color().setHSL(0.3, 0.5 + Math.random() * 0.3, 0.25 + Math.random() * 0.15);
+
+            for (let i = 0; i < 3; i++) {
+                const radius = 12 - i * 3 + Math.random() * 3;
+                const foliageGeometry = new THREE.ConeGeometry(radius, 15 - i * 2, 8);
+                const foliageMaterial = new THREE.MeshLambertMaterial({ color: foliageColor });
+                const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                foliage.position.y = trunkHeight + i * 8;
+                foliage.castShadow = true;
+                tree.add(foliage);
+            }
+
+            tree.position.set(x, 0, z);
+            scene.add(tree);
+            trees.push(tree);
+        }
+
+        function createForest() {
+            // Create trees avoiding the center area
+            for (let i = 0; i < 40; i++) {
+                let x, z;
+                do {
+                    x = (Math.random() - 0.5) * 500;
+                    z = (Math.random() - 0.5) * 500;
+                } while (Math.abs(x) < 50 && Math.abs(z) < 50);
+
+                createTree(x, z);
+            }
+        }
+
+        function createBoid(type, position) {
+            const boid = new THREE.Group();
+            const typeInfo = ANIMAL_TYPES[type];
+
+            if (type === 'FIREFLY') {
+                // Firefly - glowing sphere
+                const bodyGeometry = new THREE.SphereGeometry(typeInfo.size, 8, 8);
+                const bodyMaterial = new THREE.MeshBasicMaterial({
+                    color: typeInfo.color,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                boid.add(body);
+
+                // Glow effect
+                const glowGeometry = new THREE.SphereGeometry(typeInfo.size * 2, 8, 8);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: typeInfo.color,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                boid.add(glow);
+            } else {
+                // Bird/Butterfly body
+                const bodyGeometry = new THREE.ConeGeometry(typeInfo.size * 0.5, typeInfo.size * 2, 6);
+                const bodyMaterial = new THREE.MeshLambertMaterial({ color: typeInfo.color });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.rotation.x = Math.PI / 2;
+                boid.add(body);
+
+                // Wings
+                if (typeInfo.wingSpan > 0) {
+                    const wingGeometry = type === 'BUTTERFLY'
+                        ? new THREE.CircleGeometry(typeInfo.wingSpan / 2, 6)
+                        : new THREE.PlaneGeometry(typeInfo.wingSpan, typeInfo.size);
+
+                    const wingMaterial = new THREE.MeshLambertMaterial({
+                        color: typeInfo.color,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: type === 'BUTTERFLY' ? 0.7 : 1
+                    });
+
+                    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+                    leftWing.position.set(-typeInfo.wingSpan / 3, 0, 0);
+                    leftWing.rotation.y = Math.PI / 4;
+                    leftWing.name = 'leftWing';
+                    boid.add(leftWing);
+
+                    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+                    rightWing.position.set(typeInfo.wingSpan / 3, 0, 0);
+                    rightWing.rotation.y = -Math.PI / 4;
+                    rightWing.name = 'rightWing';
+                    boid.add(rightWing);
+                }
+
+                // Eyes for predators
+                if (typeInfo.isPredator) {
+                    const eyeGeometry = new THREE.SphereGeometry(0.5, 6, 6);
+                    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+                    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    leftEye.position.set(-0.8, 0.3, typeInfo.size * 0.8);
+                    boid.add(leftEye);
+
+                    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    rightEye.position.set(0.8, 0.3, typeInfo.size * 0.8);
+                    boid.add(rightEye);
+                }
+            }
+
+            boid.position.copy(position);
+
+            // Boid data
+            boid.userData = {
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                ),
+                type: type,
+                isPredator: typeInfo.isPredator || false,
+                neighborCount: 0,
+                wingPhase: Math.random() * Math.PI * 2
+            };
+
+            scene.add(boid);
+            return boid;
+        }
+
+        function createBoids() {
+            // Clear existing boids
+            boids.forEach(b => scene.remove(b));
+            boids = [];
+
+            const types = ['BLUEBIRD', 'BUTTERFLY', 'FIREFLY'];
+
+            for (let i = 0; i < params.preyCount; i++) {
+                const type = types[i % types.length];
+                const position = new THREE.Vector3(
+                    (Math.random() - 0.5) * BOUNDS.x,
+                    20 + Math.random() * BOUNDS.y,
+                    (Math.random() - 0.5) * BOUNDS.z
+                );
+                const boid = createBoid(type, position);
+                boids.push(boid);
+            }
+        }
+
+        function createPredators() {
+            // Clear existing predators
+            predators.forEach(p => scene.remove(p));
+            predators = [];
+
+            for (let i = 0; i < params.predatorCount; i++) {
+                const position = new THREE.Vector3(
+                    (Math.random() - 0.5) * BOUNDS.x,
+                    50 + Math.random() * 50,
+                    (Math.random() - 0.5) * BOUNDS.z
+                );
+                const predator = createBoid('HAWK', position);
+                predators.push(predator);
+            }
+        }
+
+        function updateBoids(deltaTime) {
+            const allBoids = [...boids, ...predators];
+            let totalSpeed = 0;
+            let totalNeighbors = 0;
+
+            // Update prey
+            boids.forEach(boid => {
+                const separation = new THREE.Vector3();
+                const alignment = new THREE.Vector3();
+                const cohesion = new THREE.Vector3();
+                const flee = new THREE.Vector3();
+                let neighborCount = 0;
+
+                // Check neighbors
+                boids.forEach(other => {
+                    if (other === boid) return;
+
+                    const distance = boid.position.distanceTo(other.position);
+                    if (distance < params.neighborRadius) {
+                        neighborCount++;
+
+                        // Separation
+                        const diff = boid.position.clone().sub(other.position);
+                        diff.normalize().divideScalar(Math.max(distance, 0.1));
+                        separation.add(diff);
+
+                        // Alignment
+                        alignment.add(other.userData.velocity);
+
+                        // Cohesion
+                        cohesion.add(other.position);
+                    }
+                });
+
+                // Flee from predators
+                predators.forEach(predator => {
+                    const distance = boid.position.distanceTo(predator.position);
+                    if (distance < params.fearRadius) {
+                        const diff = boid.position.clone().sub(predator.position);
+                        diff.normalize().multiplyScalar(params.fearRadius / Math.max(distance, 1));
+                        flee.add(diff);
+                    }
+                });
+
+                if (neighborCount > 0) {
+                    alignment.divideScalar(neighborCount);
+                    cohesion.divideScalar(neighborCount);
+                    cohesion.sub(boid.position);
+                }
+
+                // Apply forces
+                const acceleration = new THREE.Vector3();
+                acceleration.add(separation.multiplyScalar(params.separation));
+                acceleration.add(alignment.normalize().multiplyScalar(params.alignment));
+                acceleration.add(cohesion.normalize().multiplyScalar(params.cohesion));
+                acceleration.add(flee.multiplyScalar(3)); // Fear is strong
+
+                // Mouse interaction
+                if (mouseMode !== 'none') {
+                    const mouseDistance = boid.position.distanceTo(mouse3D);
+                    if (mouseDistance < 100) {
+                        const mouseForce = boid.position.clone().sub(mouse3D);
+                        mouseForce.normalize().multiplyScalar(params.mouseForce * (100 - mouseDistance) / 100);
+                        if (mouseMode === 'attract') mouseForce.negate();
+                        acceleration.add(mouseForce);
+                    }
+                }
+
+                // Boundary avoidance
+                const margin = 30;
+                if (boid.position.x < -BOUNDS.x + margin) acceleration.x += 2;
+                if (boid.position.x > BOUNDS.x - margin) acceleration.x -= 2;
+                if (boid.position.y < 10) acceleration.y += 2;
+                if (boid.position.y > BOUNDS.y) acceleration.y -= 2;
+                if (boid.position.z < -BOUNDS.z + margin) acceleration.z += 2;
+                if (boid.position.z > BOUNDS.z - margin) acceleration.z -= 2;
+
+                // Update velocity
+                boid.userData.velocity.add(acceleration.multiplyScalar(deltaTime));
+
+                // Limit speed
+                const speed = boid.userData.velocity.length();
+                if (speed > params.maxSpeed) {
+                    boid.userData.velocity.multiplyScalar(params.maxSpeed / speed);
+                }
+
+                // Update position
+                boid.position.add(boid.userData.velocity.clone().multiplyScalar(deltaTime * 10));
+
+                // Rotate to face direction
+                if (boid.userData.velocity.length() > 0.1) {
+                    const target = boid.position.clone().add(boid.userData.velocity);
+                    boid.lookAt(target);
+                }
+
+                // Animate wings
+                boid.userData.wingPhase += deltaTime * 15;
+                const wingAngle = Math.sin(boid.userData.wingPhase) * 0.5;
+                boid.children.forEach(child => {
+                    if (child.name === 'leftWing') child.rotation.z = wingAngle;
+                    if (child.name === 'rightWing') child.rotation.z = -wingAngle;
+                });
+
+                boid.userData.neighborCount = neighborCount;
+                totalSpeed += boid.userData.velocity.length();
+                totalNeighbors += neighborCount;
+            });
+
+            // Update predators
+            predators.forEach(predator => {
+                // Find nearest prey
+                let nearestPrey = null;
+                let nearestDistance = Infinity;
+
+                boids.forEach(prey => {
+                    const distance = predator.position.distanceTo(prey.position);
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestPrey = prey;
+                    }
+                });
+
+                const acceleration = new THREE.Vector3();
+
+                // Chase nearest prey
+                if (nearestPrey && nearestDistance < 150) {
+                    const chase = nearestPrey.position.clone().sub(predator.position);
+                    chase.normalize().multiplyScalar(2);
+                    acceleration.add(chase);
+                } else {
+                    // Wander
+                    acceleration.add(new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.5,
+                        (Math.random() - 0.5) * 0.3,
+                        (Math.random() - 0.5) * 0.5
+                    ));
+                }
+
+                // Separation from other predators
+                predators.forEach(other => {
+                    if (other === predator) return;
+                    const distance = predator.position.distanceTo(other.position);
+                    if (distance < 50) {
+                        const diff = predator.position.clone().sub(other.position);
+                        diff.normalize().divideScalar(distance);
+                        acceleration.add(diff);
+                    }
+                });
+
+                // Boundary avoidance
+                const margin = 30;
+                if (predator.position.x < -BOUNDS.x + margin) acceleration.x += 1;
+                if (predator.position.x > BOUNDS.x - margin) acceleration.x -= 1;
+                if (predator.position.y < 20) acceleration.y += 1;
+                if (predator.position.y > BOUNDS.y + 20) acceleration.y -= 1;
+                if (predator.position.z < -BOUNDS.z + margin) acceleration.z += 1;
+                if (predator.position.z > BOUNDS.z - margin) acceleration.z -= 1;
+
+                // Update velocity
+                predator.userData.velocity.add(acceleration.multiplyScalar(deltaTime));
+
+                // Limit speed
+                const speed = predator.userData.velocity.length();
+                if (speed > params.predatorSpeed) {
+                    predator.userData.velocity.multiplyScalar(params.predatorSpeed / speed);
+                }
+
+                // Update position
+                predator.position.add(predator.userData.velocity.clone().multiplyScalar(deltaTime * 10));
+
+                // Rotate to face direction
+                if (predator.userData.velocity.length() > 0.1) {
+                    const target = predator.position.clone().add(predator.userData.velocity);
+                    predator.lookAt(target);
+                }
+
+                // Animate wings (slower for hawks)
+                predator.userData.wingPhase += deltaTime * 8;
+                const wingAngle = Math.sin(predator.userData.wingPhase) * 0.3;
+                predator.children.forEach(child => {
+                    if (child.name === 'leftWing') child.rotation.z = wingAngle;
+                    if (child.name === 'rightWing') child.rotation.z = -wingAngle;
+                });
+
+                totalSpeed += predator.userData.velocity.length();
+            });
+
+            // Update instruments
+            const totalBoids = boids.length + predators.length;
+            document.getElementById('boidCount').textContent = totalBoids;
+            document.getElementById('avgSpeed').textContent = (totalSpeed / totalBoids).toFixed(1);
+            document.getElementById('avgNeighbors').textContent = boids.length > 0
+                ? (totalNeighbors / boids.length).toFixed(1)
+                : '0.0';
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // FPS calculation
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = currentTime;
+                document.getElementById('fps').textContent = fps;
+            }
+
+            if (!isPaused) {
+                const deltaTime = 1 / 60;
+                updateBoids(deltaTime);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function setupEventListeners() {
+            // Camera controls - simple orbit
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            let cameraAngle = { theta: 0, phi: Math.PI / 4 };
+            let cameraDistance = 250;
+
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                // Update mouse 3D position for boid interaction
+                mouse2D.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse2D.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse2D, camera);
+                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -40);
+                raycaster.ray.intersectPlane(plane, mouse3D);
+
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.clientX - previousMousePosition.x,
+                        y: e.clientY - previousMousePosition.y
+                    };
+
+                    cameraAngle.theta -= deltaMove.x * 0.01;
+                    cameraAngle.phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1,
+                        cameraAngle.phi + deltaMove.y * 0.01));
+
+                    updateCameraPosition();
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            renderer.domElement.addEventListener('wheel', (e) => {
+                cameraDistance = Math.max(100, Math.min(500, cameraDistance + e.deltaY * 0.5));
+                updateCameraPosition();
+            });
+
+            function updateCameraPosition() {
+                camera.position.x = cameraDistance * Math.sin(cameraAngle.theta) * Math.cos(cameraAngle.phi);
+                camera.position.y = cameraDistance * Math.sin(cameraAngle.phi);
+                camera.position.z = cameraDistance * Math.cos(cameraAngle.theta) * Math.cos(cameraAngle.phi);
+                camera.lookAt(0, 40, 0);
+            }
+        }
+
+        function setupControls() {
+            // Pause/Resume
+            document.getElementById('pauseBtn').addEventListener('click', () => {
+                isPaused = !isPaused;
+                document.getElementById('pauseBtn').textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+            });
+
+            // Reset
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                createBoids();
+                createPredators();
+            });
+
+            // Presets
+            document.getElementById('presetSchooling').addEventListener('click', () => {
+                setPreset('schooling');
+            });
+            document.getElementById('presetChaotic').addEventListener('click', () => {
+                setPreset('chaotic');
+            });
+            document.getElementById('presetTight').addEventListener('click', () => {
+                setPreset('tight');
+            });
+
+            // Sliders
+            const sliders = [
+                { id: 'separation', param: 'separation', display: 'sepVal' },
+                { id: 'alignment', param: 'alignment', display: 'aliVal' },
+                { id: 'cohesion', param: 'cohesion', display: 'cohVal' },
+                { id: 'radius', param: 'neighborRadius', display: 'radVal' },
+                { id: 'maxSpeed', param: 'maxSpeed', display: 'speedVal' },
+                { id: 'predatorSpeed', param: 'predatorSpeed', display: 'predSpeedVal' },
+                { id: 'fearRadius', param: 'fearRadius', display: 'fearVal' },
+                { id: 'mouseForce', param: 'mouseForce', display: 'mouseForceVal' }
+            ];
+
+            sliders.forEach(s => {
+                const slider = document.getElementById(s.id);
+                slider.addEventListener('input', () => {
+                    params[s.param] = parseFloat(slider.value);
+                    document.getElementById(s.display).textContent = slider.value;
+                    clearPresetHighlight();
+                });
+            });
+
+            // Population sliders with rebuild
+            document.getElementById('preyCount').addEventListener('input', (e) => {
+                params.preyCount = parseInt(e.target.value);
+                document.getElementById('preyCountVal').textContent = e.target.value;
+            });
+            document.getElementById('preyCount').addEventListener('change', () => {
+                createBoids();
+            });
+
+            document.getElementById('predatorCount').addEventListener('input', (e) => {
+                params.predatorCount = parseInt(e.target.value);
+                document.getElementById('predCountVal').textContent = e.target.value;
+            });
+            document.getElementById('predatorCount').addEventListener('change', () => {
+                createPredators();
+            });
+
+            // Mouse mode
+            document.getElementById('mouseAttract').addEventListener('click', () => {
+                mouseMode = 'attract';
+                highlightMouseMode('mouseAttract');
+            });
+            document.getElementById('mouseRepel').addEventListener('click', () => {
+                mouseMode = 'repel';
+                highlightMouseMode('mouseRepel');
+            });
+            document.getElementById('mouseNone').addEventListener('click', () => {
+                mouseMode = 'none';
+                highlightMouseMode('mouseNone');
+            });
+        }
+
+        function highlightMouseMode(activeId) {
+            ['mouseAttract', 'mouseRepel', 'mouseNone'].forEach(id => {
+                document.getElementById(id).style.opacity = id === activeId ? '1' : '0.6';
+            });
+        }
+
+        function clearPresetHighlight() {
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function setPreset(name) {
+            clearPresetHighlight();
+
+            const presets = {
+                schooling: {
+                    separation: 1.2,
+                    alignment: 2.0,
+                    cohesion: 1.5,
+                    neighborRadius: 60,
+                    maxSpeed: 3.5
+                },
+                chaotic: {
+                    separation: 3.0,
+                    alignment: 0.3,
+                    cohesion: 0.3,
+                    neighborRadius: 30,
+                    maxSpeed: 6.0
+                },
+                tight: {
+                    separation: 0.8,
+                    alignment: 1.5,
+                    cohesion: 3.0,
+                    neighborRadius: 80,
+                    maxSpeed: 2.5
+                }
+            };
+
+            const preset = presets[name];
+            if (preset) {
+                Object.keys(preset).forEach(key => {
+                    params[key] = preset[key];
+
+                    // Update sliders
+                    const sliderMap = {
+                        separation: 'separation',
+                        alignment: 'alignment',
+                        cohesion: 'cohesion',
+                        neighborRadius: 'radius',
+                        maxSpeed: 'maxSpeed'
+                    };
+                    const displayMap = {
+                        separation: 'sepVal',
+                        alignment: 'aliVal',
+                        cohesion: 'cohVal',
+                        neighborRadius: 'radVal',
+                        maxSpeed: 'speedVal'
+                    };
+
+                    const slider = document.getElementById(sliderMap[key]);
+                    if (slider) {
+                        slider.value = preset[key];
+                        document.getElementById(displayMap[key]).textContent = preset[key];
+                    }
+                });
+
+                document.getElementById(`preset${name.charAt(0).toUpperCase() + name.slice(1)}`).classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
