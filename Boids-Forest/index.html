@@ -40,18 +40,78 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
 
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .panel-header:hover {
+            opacity: 0.8;
+        }
+
+        .toggle-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            max-height: 1000px;
+            opacity: 1;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
         #controls h2 {
             color: #7fff7f;
-            margin-bottom: 15px;
+            margin: 0;
             font-size: 18px;
+        }
+
+        #controls > .panel-header {
             border-bottom: 1px solid rgba(100, 200, 100, 0.3);
             padding-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         #controls h3 {
             color: #aaffaa;
             margin: 15px 0 10px 0;
             font-size: 14px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 0;
+            margin: 10px 0 5px 0;
+            border-bottom: 1px solid rgba(100, 200, 100, 0.2);
+        }
+
+        .section-header:hover {
+            background: rgba(100, 200, 100, 0.1);
+            margin-left: -5px;
+            margin-right: -5px;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+
+        .section-header h3 {
+            margin: 0;
         }
 
         .control-group {
@@ -165,10 +225,18 @@
 
         #instruments h2 {
             color: #7fff7f;
-            margin-bottom: 15px;
+            margin: 0;
             font-size: 16px;
+        }
+
+        #instruments .panel-header {
             border-bottom: 1px solid rgba(100, 200, 100, 0.3);
             padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+
+        #instruments .collapsible-content {
+            padding-top: 5px;
         }
 
         .instrument {
@@ -199,10 +267,12 @@
             border: 1px solid rgba(100, 200, 100, 0.3);
         }
 
-        #legend h3 {
-            color: #7fff7f;
+        #legend .panel-header {
             margin-bottom: 10px;
-            font-size: 14px;
+        }
+
+        #legend .collapsible-content {
+            padding-top: 5px;
         }
 
         .legend-item {
@@ -235,6 +305,14 @@
             color: #7fff7f;
         }
 
+        #instructions .panel-header {
+            margin-bottom: 0;
+        }
+
+        #instructions .collapsible-content strong {
+            color: #aaa;
+        }
+
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -253,118 +331,170 @@
     <div id="canvas-container"></div>
 
     <div id="controls">
-        <h2>🌲 Forest Boids Control</h2>
+        <div class="panel-header" onclick="togglePanel('controls')">
+            <h2>🌲 Forest Boids Control</h2>
+            <span class="toggle-icon" id="controls-toggle">▼</span>
+        </div>
+        <div class="collapsible-content" id="controls-content">
+            <div class="section-header" onclick="toggleSection('simulation')">
+                <h3>Simulation</h3>
+                <span class="toggle-icon" id="simulation-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="simulation-content">
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="pauseBtn">⏸ Pause</button>
+                    <button class="btn btn-secondary" id="resetBtn">🔄 Reset</button>
+                </div>
+            </div>
 
-        <h3>Simulation</h3>
-        <div class="btn-group">
-            <button class="btn btn-primary" id="pauseBtn">⏸ Pause</button>
-            <button class="btn btn-secondary" id="resetBtn">🔄 Reset</button>
-        </div>
+            <div class="section-header" onclick="toggleSection('presets')">
+                <h3>Presets</h3>
+                <span class="toggle-icon" id="presets-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="presets-content">
+                <div class="btn-group">
+                    <button class="btn preset-btn" id="presetSchooling">Schooling</button>
+                    <button class="btn preset-btn" id="presetChaotic">Chaotic</button>
+                    <button class="btn preset-btn" id="presetTight">Tight</button>
+                </div>
+            </div>
 
-        <h3>Presets</h3>
-        <div class="btn-group">
-            <button class="btn preset-btn" id="presetSchooling">Schooling</button>
-            <button class="btn preset-btn" id="presetChaotic">Chaotic</button>
-            <button class="btn preset-btn" id="presetTight">Tight</button>
-        </div>
+            <div class="section-header" onclick="toggleSection('behavior')">
+                <h3>Boid Behavior</h3>
+                <span class="toggle-icon" id="behavior-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="behavior-content">
+                <div class="control-group">
+                    <label>Separation Weight <span class="value-display" id="sepVal">1.5</span></label>
+                    <input type="range" id="separation" min="0" max="5" step="0.1" value="1.5">
+                </div>
+                <div class="control-group">
+                    <label>Alignment Weight <span class="value-display" id="aliVal">1.0</span></label>
+                    <input type="range" id="alignment" min="0" max="5" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Cohesion Weight <span class="value-display" id="cohVal">1.0</span></label>
+                    <input type="range" id="cohesion" min="0" max="5" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Neighbor Radius <span class="value-display" id="radVal">50</span></label>
+                    <input type="range" id="radius" min="10" max="150" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label>Max Speed <span class="value-display" id="speedVal">4.0</span></label>
+                    <input type="range" id="maxSpeed" min="1" max="10" step="0.5" value="4.0">
+                </div>
+            </div>
 
-        <h3>Boid Behavior</h3>
-        <div class="control-group">
-            <label>Separation Weight <span class="value-display" id="sepVal">1.5</span></label>
-            <input type="range" id="separation" min="0" max="5" step="0.1" value="1.5">
-        </div>
-        <div class="control-group">
-            <label>Alignment Weight <span class="value-display" id="aliVal">1.0</span></label>
-            <input type="range" id="alignment" min="0" max="5" step="0.1" value="1.0">
-        </div>
-        <div class="control-group">
-            <label>Cohesion Weight <span class="value-display" id="cohVal">1.0</span></label>
-            <input type="range" id="cohesion" min="0" max="5" step="0.1" value="1.0">
-        </div>
-        <div class="control-group">
-            <label>Neighbor Radius <span class="value-display" id="radVal">50</span></label>
-            <input type="range" id="radius" min="10" max="150" step="5" value="50">
-        </div>
-        <div class="control-group">
-            <label>Max Speed <span class="value-display" id="speedVal">4.0</span></label>
-            <input type="range" id="maxSpeed" min="1" max="10" step="0.5" value="4.0">
-        </div>
+            <div class="section-header" onclick="toggleSection('predator')">
+                <h3>Predator Settings</h3>
+                <span class="toggle-icon" id="predator-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="predator-content">
+                <div class="control-group">
+                    <label>Predator Speed <span class="value-display" id="predSpeedVal">5.0</span></label>
+                    <input type="range" id="predatorSpeed" min="2" max="12" step="0.5" value="5.0">
+                </div>
+                <div class="control-group">
+                    <label>Fear Radius <span class="value-display" id="fearVal">80</span></label>
+                    <input type="range" id="fearRadius" min="20" max="200" step="10" value="80">
+                </div>
+            </div>
 
-        <h3>Predator Settings</h3>
-        <div class="control-group">
-            <label>Predator Speed <span class="value-display" id="predSpeedVal">5.0</span></label>
-            <input type="range" id="predatorSpeed" min="2" max="12" step="0.5" value="5.0">
-        </div>
-        <div class="control-group">
-            <label>Fear Radius <span class="value-display" id="fearVal">80</span></label>
-            <input type="range" id="fearRadius" min="20" max="200" step="10" value="80">
-        </div>
+            <div class="section-header" onclick="toggleSection('mouse')">
+                <h3>Mouse Interaction</h3>
+                <span class="toggle-icon" id="mouse-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="mouse-content">
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="mouseAttract">🧲 Attract</button>
+                    <button class="btn btn-danger" id="mouseRepel">💨 Repel</button>
+                    <button class="btn btn-primary" id="mouseNone">🚫 None</button>
+                </div>
+                <div class="control-group">
+                    <label>Mouse Force <span class="value-display" id="mouseForceVal">2.0</span></label>
+                    <input type="range" id="mouseForce" min="0.5" max="10" step="0.5" value="2.0">
+                </div>
+            </div>
 
-        <h3>Mouse Interaction</h3>
-        <div class="btn-group">
-            <button class="btn btn-secondary" id="mouseAttract">🧲 Attract</button>
-            <button class="btn btn-danger" id="mouseRepel">💨 Repel</button>
-            <button class="btn btn-primary" id="mouseNone">🚫 None</button>
-        </div>
-        <div class="control-group">
-            <label>Mouse Force <span class="value-display" id="mouseForceVal">2.0</span></label>
-            <input type="range" id="mouseForce" min="0.5" max="10" step="0.5" value="2.0">
-        </div>
-
-        <h3>Population</h3>
-        <div class="control-group">
-            <label>Prey Count <span class="value-display" id="preyCountVal">80</span></label>
-            <input type="range" id="preyCount" min="10" max="200" step="10" value="80">
-        </div>
-        <div class="control-group">
-            <label>Predator Count <span class="value-display" id="predCountVal">3</span></label>
-            <input type="range" id="predatorCount" min="0" max="10" step="1" value="3">
+            <div class="section-header" onclick="toggleSection('population')">
+                <h3>Population</h3>
+                <span class="toggle-icon" id="population-toggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="population-content">
+                <div class="control-group">
+                    <label>Prey Count <span class="value-display" id="preyCountVal">80</span></label>
+                    <input type="range" id="preyCount" min="10" max="200" step="10" value="80">
+                </div>
+                <div class="control-group">
+                    <label>Predator Count <span class="value-display" id="predCountVal">3</span></label>
+                    <input type="range" id="predatorCount" min="0" max="10" step="1" value="3">
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="instruments">
-        <h2>📊 Instruments</h2>
-        <div class="instrument">
-            <span class="instrument-label">FPS:</span>
-            <span class="instrument-value" id="fps">60</span>
+        <div class="panel-header" onclick="togglePanel('instruments')">
+            <h2>📊 Instruments</h2>
+            <span class="toggle-icon" id="instruments-toggle">▼</span>
         </div>
-        <div class="instrument">
-            <span class="instrument-label">Boid Count:</span>
-            <span class="instrument-value" id="boidCount">0</span>
-        </div>
-        <div class="instrument">
-            <span class="instrument-label">Avg Speed:</span>
-            <span class="instrument-value" id="avgSpeed">0.0</span>
-        </div>
-        <div class="instrument">
-            <span class="instrument-label">Avg Neighbors:</span>
-            <span class="instrument-value" id="avgNeighbors">0.0</span>
+        <div class="collapsible-content" id="instruments-content">
+            <div class="instrument">
+                <span class="instrument-label">FPS:</span>
+                <span class="instrument-value" id="fps">60</span>
+            </div>
+            <div class="instrument">
+                <span class="instrument-label">Boid Count:</span>
+                <span class="instrument-value" id="boidCount">0</span>
+            </div>
+            <div class="instrument">
+                <span class="instrument-label">Avg Speed:</span>
+                <span class="instrument-value" id="avgSpeed">0.0</span>
+            </div>
+            <div class="instrument">
+                <span class="instrument-label">Avg Neighbors:</span>
+                <span class="instrument-value" id="avgNeighbors">0.0</span>
+            </div>
         </div>
     </div>
 
     <div id="legend">
-        <h3>🦁 Animals</h3>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #4a9fff;"></div>
-            <span>Bluebirds (Prey)</span>
+        <div class="panel-header" onclick="togglePanel('legend')">
+            <h3 style="color: #7fff7f; margin: 0;">🦁 Animals</h3>
+            <span class="toggle-icon" id="legend-toggle">▼</span>
         </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #ffaa33;"></div>
-            <span>Butterflies (Prey)</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #88cc44;"></div>
-            <span>Fireflies (Prey)</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color" style="background: #ff4444;"></div>
-            <span>Hawks (Predator)</span>
+        <div class="collapsible-content" id="legend-content">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4a9fff;"></div>
+                <span>Bluebirds (Prey)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffaa33;"></div>
+                <span>Butterflies (Prey)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #88cc44;"></div>
+                <span>Fireflies (Prey)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff4444;"></div>
+                <span>Hawks (Predator)</span>
+            </div>
         </div>
     </div>
 
     <div id="instructions">
-        <strong>Controls:</strong> Click & drag to rotate | Scroll to zoom<br>
-        <strong>Mouse Mode:</strong> Select attract/repel and move cursor
+        <div class="panel-header" onclick="togglePanel('instructions')">
+            <strong style="color: #7fff7f;">📖 Help</strong>
+            <span class="toggle-icon" id="instructions-toggle">▼</span>
+        </div>
+        <div class="collapsible-content" id="instructions-content">
+            <div style="margin-top: 8px;">
+                <strong>Controls:</strong> Click & drag to rotate | Scroll to zoom<br>
+                <strong>Mouse Mode:</strong> Select attract/repel and move cursor
+            </div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -373,6 +503,36 @@
         // 3D FOREST BOIDS SIMULATION
         // With Predator/Prey Dynamics
         // ============================================
+
+        // Toggle functions for collapsible panels
+        function togglePanel(panelId) {
+            const content = document.getElementById(panelId + '-content');
+            const toggle = document.getElementById(panelId + '-toggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+        }
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + '-content');
+            const toggle = document.getElementById(sectionId + '-toggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+            }
+
+            // Stop event propagation to prevent panel toggle
+            event.stopPropagation();
+        }
 
         // Scene Setup
         let scene, camera, renderer;
