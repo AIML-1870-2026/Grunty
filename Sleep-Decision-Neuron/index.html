@@ -1,0 +1,2566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Neuron Chain</title>
+<style>
+  :root {
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --sleep-pos: #00ce9e;
+    --sleep-neg: #6c5ce7;
+    --bfast-pos: #fdcb6e;
+    --negative: #ff6b81;
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1e293b;
+    --text: #c8d6e5;
+    --muted: #636e85;
+    --slider-thumb: var(--accent);
+    --slider-border: var(--accent2);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    text-align: center;
+    padding: 24px 20px 8px;
+    font-size: 1.8rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: var(--accent2);
+  }
+  h1 span {
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  /* ========== TOOLBAR ========== */
+  .toolbar {
+    max-width: 1500px;
+    margin: 0 auto 12px;
+    padding: 0 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .tool-group {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tool-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+
+  .btn {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: #fff; }
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-accent:hover { filter: brightness(1.2); }
+  .btn-green { background: #00b894; border-color: #00b894; color: #fff; }
+  .btn-green:hover { filter: brightness(1.2); }
+  .btn-red { background: #d63031; border-color: #d63031; color: #fff; }
+  .btn-red:hover { filter: brightness(1.2); }
+  .btn-warn { background: #e17055; border-color: #e17055; color: #fff; }
+  .btn-warn:hover { filter: brightness(1.2); }
+
+  .train-stat {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: monospace;
+  }
+  .train-stat b { color: var(--accent2); }
+
+  .theme-swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .theme-swatch:hover { transform: scale(1.2); }
+  .theme-swatch.active { border-color: #fff; transform: scale(1.15); }
+
+  /* ========== EQUATIONS ========== */
+  .equations {
+    max-width: 1500px;
+    margin: 0 auto 14px;
+    padding: 0 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .equation-box {
+    flex: 1 1 300px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #8892a6;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .equation-box .tag {
+    display: inline-block;
+    font-family: system-ui;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-right: 6px;
+    font-weight: 600;
+  }
+  .tag-sleep { background: rgba(0,206,158,0.15); color: var(--sleep-pos); }
+  .tag-bfast { background: rgba(253,203,110,0.15); color: var(--bfast-pos); }
+
+  .equation-box .hl  { color: var(--accent2); font-weight: 600; }
+  .equation-box .pos { color: var(--sleep-pos); }
+  .equation-box .neg { color: var(--negative); }
+  .equation-box .chain { color: var(--bfast-pos); }
+
+  /* ========== MAIN CONTAINER ========== */
+  .container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding: 0 24px 40px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .section-label.sleep-label { color: var(--sleep-pos); }
+  .section-label.bfast-label { color: var(--bfast-pos); }
+
+  /* ========== INPUTS ========== */
+  .inputs-panel { flex: 0 1 340px; min-width: 290px; }
+
+  .input-group { margin-bottom: 14px; }
+
+  .input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .input-label .name { font-size: 0.82rem; color: #dfe6ee; }
+  .input-label .value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent2);
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .weight-badge {
+    font-size: 0.55rem;
+    padding: 1px 5px;
+    border-radius: 6px;
+    margin-left: 4px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+  .weight-pos { background: rgba(0,206,158,0.15); color: var(--sleep-pos); }
+  .weight-neg { background: rgba(255,107,129,0.15); color: var(--negative); }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--slider-thumb);
+    cursor: pointer;
+    border: 2px solid var(--slider-border);
+    box-shadow: 0 0 8px rgba(108,92,231,0.3);
+    transition: box-shadow 0.2s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 14px rgba(108,92,231,0.6);
+  }
+  .bfast-slider::-webkit-slider-thumb {
+    background: #e17055 !important;
+    border-color: var(--bfast-pos) !important;
+    box-shadow: 0 0 8px rgba(253,203,110,0.3) !important;
+  }
+  .bfast-slider::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 14px rgba(253,203,110,0.6) !important;
+  }
+
+  .toggle-row { display: flex; align-items: center; gap: 10px; }
+  .toggle { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+  .toggle input { display: none; }
+  .toggle .slider {
+    position: absolute; inset: 0;
+    background: var(--border); border-radius: 13px;
+    cursor: pointer; transition: background 0.3s;
+  }
+  .toggle .slider::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; left: 3px; top: 3px;
+    background: var(--muted); border-radius: 50%;
+    transition: transform 0.3s, background 0.3s;
+  }
+  .toggle input:checked + .slider { background: rgba(108,92,231,0.3); }
+  .toggle input:checked + .slider::after { transform: translateX(22px); background: var(--accent); }
+  .toggle-label { font-size: 0.8rem; color: #8892a6; }
+
+  /* ========== TRAINING LABELS ========== */
+  .label-section {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .label-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    align-items: center;
+  }
+  .label-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  /* ========== VISUALIZATION ========== */
+  .vis-panel {
+    flex: 1 1 500px;
+    max-width: 620px;
+    min-width: 340px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .vis-panel canvas { width: 100%; border-radius: 12px; }
+
+  .sigmoid-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .sigmoid-row canvas {
+    flex: 1;
+    border-radius: 12px;
+    cursor: crosshair;
+  }
+
+  .probe-info {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 4px;
+    min-height: 1.2em;
+    font-family: monospace;
+  }
+
+  /* ========== OUTPUTS ========== */
+  .outputs-panel {
+    flex: 0 1 300px;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .output-block { text-align: center; padding: 12px 0; }
+
+  .decision-ring {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    margin: 0 auto 10px;
+    position: relative;
+    transition: box-shadow 0.5s;
+  }
+  .decision-ring svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+  .decision-ring circle { fill: none; stroke-width: 5; stroke-linecap: round; }
+  .ring-bg { stroke: var(--border); }
+  .ring-fill { transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease; }
+
+  .decision-pct {
+    font-size: 2rem; font-weight: 700; z-index: 1;
+    transition: color 0.5s;
+  }
+  .decision-lbl {
+    font-size: 0.6rem; text-transform: uppercase;
+    letter-spacing: 1.5px; z-index: 1; color: var(--muted);
+  }
+
+  .verdict {
+    font-size: 1.05rem; font-weight: 600;
+    transition: color 0.5s; min-height: 1.4em;
+  }
+  .verdict-sub {
+    font-size: 0.7rem; color: var(--muted);
+    max-width: 220px; margin: 3px auto 0; line-height: 1.4;
+  }
+  .chain-arrow { color: var(--muted); font-size: 1rem; margin: 0; }
+
+  /* ========== TOASTS ========== */
+  .toast-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    max-width: 320px;
+  }
+
+  .toast {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    pointer-events: auto;
+    animation: toastIn 0.4s ease-out, toastOut 0.4s ease-in forwards;
+    animation-delay: 0s, 4s;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .toast::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+  .toast-sleep::before { background: var(--sleep-pos); }
+  .toast-bfast::before { background: var(--bfast-pos); }
+  .toast-warn::before  { background: var(--negative); }
+  .toast-fun::before   { background: var(--accent); }
+
+  .toast-emoji {
+    font-size: 1.1rem;
+    margin-right: 6px;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(60px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(60px); }
+  }
+
+  /* ========== DECISION BOUNDARY ========== */
+  .boundary-section {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+
+  .boundary-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .boundary-controls {
+    flex: 0 0 200px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .bc-group label {
+    display: block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  .bc-group select {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+  }
+  .bc-group select:focus { border-color: var(--accent); }
+
+  .bc-label-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .bc-label-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-family: inherit;
+  }
+  .bc-label-btn:hover { border-color: var(--accent); }
+  .bc-label-btn.active-yes {
+    border-color: var(--sleep-pos);
+    background: rgba(0,206,158,0.1);
+    color: var(--sleep-pos);
+  }
+  .bc-label-btn.active-no {
+    border-color: var(--negative);
+    background: rgba(255,107,129,0.1);
+    color: var(--negative);
+  }
+
+  .bc-stats {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: monospace;
+    line-height: 1.8;
+  }
+  .bc-stats b { color: var(--accent2); }
+  .bc-stats .acc-good { color: var(--sleep-pos); }
+  .bc-stats .acc-ok   { color: var(--bfast-pos); }
+  .bc-stats .acc-bad  { color: var(--negative); }
+
+  .boundary-canvas-wrap {
+    flex: 1 1 400px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #boundaryCanvas {
+    width: 100%;
+    max-width: 520px;
+    border-radius: 12px;
+    cursor: crosshair;
+  }
+
+  .bc-hint {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* ========== ACTIVATION SHOWDOWN ========== */
+  .activation-section {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+  .activation-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .act-controls {
+    flex: 0 0 200px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .act-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-family: inherit;
+  }
+  .act-btn:hover { border-color: var(--accent); }
+  .act-btn.act-active {
+    border-color: var(--accent);
+    background: rgba(108,92,231,0.1);
+    color: var(--accent2);
+  }
+  .act-btn .act-name { font-weight: 600; display: block; }
+  .act-btn .act-desc { font-size: 0.65rem; color: var(--muted); margin-top: 2px; display: block; }
+  .act-compare-toggle {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.75rem; color: var(--muted);
+    margin-top: 4px;
+  }
+  .act-canvas-wrap {
+    flex: 1 1 400px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #activationCanvas {
+    width: 100%;
+    max-width: 520px;
+    border-radius: 12px;
+  }
+  .act-info {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+    font-family: monospace;
+    min-height: 1.2em;
+  }
+
+  /* ========== SENSITIVITY ========== */
+  .sensitivity-section {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+  }
+  .sensitivity-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .sens-controls {
+    flex: 0 0 200px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .sens-canvas-wrap {
+    flex: 1 1 400px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #sensitivityCanvas {
+    width: 100%;
+    max-width: 520px;
+    border-radius: 12px;
+  }
+  .sens-bar-wrap {
+    width: 100%;
+    max-width: 520px;
+    margin-top: 12px;
+  }
+  .sens-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .sens-bar-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    width: 90px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .sens-bar-track {
+    flex: 1;
+    height: 14px;
+    background: var(--border);
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+  }
+  .sens-bar-fill {
+    height: 100%;
+    border-radius: 7px;
+    transition: width 0.3s;
+  }
+  .sens-bar-val {
+    font-size: 0.65rem;
+    font-family: monospace;
+    color: var(--accent2);
+    width: 40px;
+    flex-shrink: 0;
+  }
+
+  /* ========== SCENARIO ========== */
+  .scenario-bar {
+    max-width: 1500px;
+    margin: 0 auto 12px;
+    padding: 0 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .scenario-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .scenario-chip:hover { border-color: var(--accent); color: #fff; }
+  .scenario-chip.sc-active {
+    border-color: var(--accent);
+    background: rgba(108,92,231,0.15);
+    color: var(--accent2);
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 900px) {
+    h1 { font-size: 1.3rem; }
+    .inputs-panel, .vis-panel, .outputs-panel { max-width: 100%; flex-basis: 100%; }
+    .sigmoid-row { flex-direction: column; }
+    .toolbar { flex-direction: column; }
+    .scenario-bar { justify-content: center; }
+    .boundary-panel, .activation-panel, .sensitivity-panel { flex-direction: column; }
+    .boundary-controls, .act-controls, .sens-controls { flex: 1 1 100%; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Decision <span>Neuron Chain</span></h1>
+<p class="subtitle">Two chained sigmoid neurons &mdash; with training, themes &amp; exploration</p>
+
+<!-- ========== SCENARIO PRESETS ========== -->
+<div class="scenario-bar">
+  <span class="tool-label" style="margin-right:4px;">Scenario</span>
+  <button class="scenario-chip sc-active" onclick="applyScenario('sleep')" id="scSleep">&#x1F634; Sleep / Breakfast</button>
+  <button class="scenario-chip" onclick="applyScenario('college')" id="scCollege">&#x1F393; Choose a College</button>
+  <button class="scenario-chip" onclick="applyScenario('pet')" id="scPet">&#x1F415; Adopt a Pet</button>
+  <button class="scenario-chip" onclick="applyScenario('roadtrip')" id="scRoadtrip">&#x1F697; Road Trip?</button>
+  <button class="scenario-chip" onclick="applyScenario('tech')" id="scTech">&#x1F4BB; Tech Upgrade</button>
+</div>
+
+<!-- ========== TOOLBAR ========== -->
+<div class="toolbar">
+  <div class="tool-group">
+    <span class="tool-label">Theme</span>
+    <div class="theme-swatch active" id="thDefault" style="background: linear-gradient(135deg, #6c5ce7, #00ce9e);" title="Default" onclick="setTheme('default')"></div>
+    <div class="theme-swatch" id="thNeon" style="background: linear-gradient(135deg, #fd79a8, #00cec9);" title="Neon" onclick="setTheme('neon')"></div>
+    <div class="theme-swatch" id="thOcean" style="background: linear-gradient(135deg, #0984e3, #55efc4);" title="Ocean" onclick="setTheme('ocean')"></div>
+    <div class="theme-swatch" id="thEmber" style="background: linear-gradient(135deg, #e17055, #fdcb6e);" title="Ember" onclick="setTheme('ember')"></div>
+  </div>
+
+  <div class="tool-group">
+    <span class="tool-label">Training</span>
+    <button class="btn" onclick="trainStep()" title="One gradient descent step">Step</button>
+    <button class="btn btn-accent" onclick="trainMultiple(100)" title="Train 100 steps">Train</button>
+    <button class="btn btn-warn" onclick="resetTraining()" title="Reset weights & data">Reset</button>
+  </div>
+
+  <div class="tool-group">
+    <span class="train-stat">Examples: <b id="statExamples">0</b></span>
+    <span class="train-stat">Epoch: <b id="statEpoch">0</b></span>
+    <span class="train-stat">Loss: <b id="statLoss">--</b></span>
+    <span class="train-stat">Acc: <b id="statAcc">--</b></span>
+  </div>
+</div>
+
+<!-- ========== EQUATIONS ========== -->
+<div class="equations">
+  <div class="equation-box" id="eqSleep"></div>
+  <div class="equation-box" id="eqBfast"></div>
+</div>
+
+<!-- ========== MAIN ========== -->
+<div class="container">
+
+  <!-- INPUTS -->
+  <div class="panel inputs-panel">
+    <div class="panel-title">Inputs &amp; Weights</div>
+
+    <div class="section-label sleep-label">Neuron 1 &mdash; Sleep</div>
+
+    <div class="input-group">
+      <div class="input-label">
+        <span class="name">Hours Until Wake <span class="weight-badge weight-pos" id="wb1">w=+2.00</span></span>
+        <span class="value" id="wakeVal">6 hrs</span>
+      </div>
+      <input type="range" id="wakeSlider" min="0" max="14" step="0.5" value="6">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">
+        <span class="name">People Hanging Out <span class="weight-badge weight-neg" id="wb2">w=-3.00</span></span>
+        <span class="value" id="hangVal">No</span>
+      </div>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="hangToggle"><div class="slider"></div></label>
+        <span class="toggle-label" id="hangDesc">Nobody's asking</span>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">
+        <span class="name">Tiredness <span class="weight-badge weight-pos" id="wb3">w=+3.50</span></span>
+        <span class="value" id="tiredVal">5 / 10</span>
+      </div>
+      <input type="range" id="tiredSlider" min="0" max="10" step="1" value="5">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">
+        <span class="name">Sleep Last Night <span class="weight-badge weight-pos" id="wb4">w=+2.50</span></span>
+        <span class="value" id="sleepVal">7 hrs</span>
+      </div>
+      <input type="range" id="sleepSlider" min="0" max="12" step="0.5" value="7">
+    </div>
+
+    <hr class="section-divider">
+    <div class="section-label bfast-label">Neuron 2 &mdash; Breakfast</div>
+
+    <div class="input-group">
+      <div class="input-label">
+        <span class="name">Time Before Class <span class="weight-badge weight-pos" id="wb5">w=+3.00</span></span>
+        <span class="value" id="classVal">1.5 hrs</span>
+      </div>
+      <input type="range" class="bfast-slider" id="classSlider" min="0" max="4" step="0.25" value="1.5">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">
+        <span class="name">How Hungry? <span class="weight-badge weight-pos" id="wb6">w=+2.50</span></span>
+        <span class="value" id="hungryVal">5 / 10</span>
+      </div>
+      <input type="range" class="bfast-slider" id="hungrySlider" min="0" max="10" step="1" value="5">
+    </div>
+
+    <div class="input-group" style="margin-bottom:0">
+      <div class="input-label">
+        <span class="name" style="font-size:0.75rem">
+          <span style="color:var(--bfast-pos)">Sleep Output (chain)</span>
+          <span class="weight-badge weight-pos" id="wb7">w=+1.50</span>
+        </span>
+        <span class="value" id="chainVal" style="color:var(--bfast-pos)">--</span>
+      </div>
+      <div style="height:5px; border-radius:3px; background:var(--border); overflow:hidden;">
+        <div id="chainBar" style="height:100%; border-radius:3px; background:var(--sleep-pos); width:50%; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <!-- TRAINING LABELS -->
+    <div class="label-section">
+      <div class="label-title">Label this scenario for training:</div>
+      <div class="label-row">
+        <span style="font-size:0.7rem; color:var(--sleep-pos); width:48px;">Sleep?</span>
+        <button class="btn btn-green" onclick="addExample('sleep',1)" style="font-size:0.65rem; padding:3px 8px;">Yes, Sleep</button>
+        <button class="btn btn-red" onclick="addExample('sleep',0)" style="font-size:0.65rem; padding:3px 8px;">No, Stay Up</button>
+      </div>
+      <div class="label-row">
+        <span style="font-size:0.7rem; color:var(--bfast-pos); width:48px;">Eat?</span>
+        <button class="btn btn-green" onclick="addExample('bfast',1)" style="font-size:0.65rem; padding:3px 8px;">Yes, Eat</button>
+        <button class="btn btn-red" onclick="addExample('bfast',0)" style="font-size:0.65rem; padding:3px 8px;">No, Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISUALIZATION -->
+  <div class="panel vis-panel">
+    <div class="panel-title">Neuron Chain</div>
+    <canvas id="neuronCanvas" width="580" height="320"></canvas>
+    <div class="sigmoid-row">
+      <canvas id="sigSleepCanvas" width="280" height="180"></canvas>
+      <canvas id="sigBfastCanvas" width="280" height="180"></canvas>
+    </div>
+    <div class="probe-info" id="probeInfo">Hover over sigmoid curves to explore</div>
+  </div>
+
+  <!-- OUTPUTS -->
+  <div class="panel outputs-panel">
+    <div class="panel-title">Decisions</div>
+
+    <div class="output-block">
+      <div class="decision-ring" id="ringSleep">
+        <svg viewBox="0 0 140 140">
+          <circle class="ring-bg" cx="70" cy="70" r="60"/>
+          <circle class="ring-fill" id="ringFillSleep" cx="70" cy="70" r="60"
+            stroke-dasharray="376.99" stroke-dashoffset="376.99"/>
+        </svg>
+        <span class="decision-pct" id="pctSleep">50%</span>
+        <span class="decision-lbl">sleep</span>
+      </div>
+      <div class="verdict" id="verdictSleep">Hmm...</div>
+      <div class="verdict-sub" id="verdictSleepSub"></div>
+    </div>
+
+    <div class="chain-arrow">&#x2193;</div>
+
+    <div class="output-block">
+      <div class="decision-ring" id="ringBfast">
+        <svg viewBox="0 0 140 140">
+          <circle class="ring-bg" cx="70" cy="70" r="60"/>
+          <circle class="ring-fill" id="ringFillBfast" cx="70" cy="70" r="60"
+            stroke-dasharray="376.99" stroke-dashoffset="376.99"/>
+        </svg>
+        <span class="decision-pct" id="pctBfast">50%</span>
+        <span class="decision-lbl">breakfast</span>
+      </div>
+      <div class="verdict" id="verdictBfast">Hmm...</div>
+      <div class="verdict-sub" id="verdictBfastSub"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DECISION BOUNDARY ========== -->
+<div class="boundary-section">
+  <div class="boundary-panel">
+    <div class="boundary-controls">
+      <div class="panel-title">Decision Boundary</div>
+
+      <div class="bc-group">
+        <label>Neuron</label>
+        <select id="bcNeuron">
+          <option value="sleep">Sleep Neuron</option>
+          <option value="bfast">Breakfast Neuron</option>
+        </select>
+      </div>
+
+      <div class="bc-group">
+        <label>X Axis</label>
+        <select id="bcXAxis"></select>
+      </div>
+
+      <div class="bc-group">
+        <label>Y Axis</label>
+        <select id="bcYAxis"></select>
+      </div>
+
+      <div class="bc-group">
+        <label>Click to Label</label>
+        <div class="bc-label-mode">
+          <button class="bc-label-btn active-yes" id="bcLabelYes" onclick="setBCLabel(1)">Click = Yes</button>
+          <button class="bc-label-btn" id="bcLabelNo" onclick="setBCLabel(0)">Click = No</button>
+        </div>
+      </div>
+
+      <div class="bc-stats">
+        Points: <b id="bcPoints">0</b><br>
+        Accuracy: <b id="bcAccuracy">--</b>
+      </div>
+    </div>
+
+    <div class="boundary-canvas-wrap">
+      <canvas id="boundaryCanvas" width="500" height="500"></canvas>
+      <div class="bc-hint">Click on the plot to add labeled data points</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ACTIVATION SHOWDOWN ========== -->
+<div class="activation-section">
+  <div class="activation-panel">
+    <div class="act-controls">
+      <div class="panel-title">Activation Showdown</div>
+      <button class="act-btn act-active" id="actSigmoid" onclick="setActivation('sigmoid')">
+        <span class="act-name">Sigmoid (Classic)</span>
+        <span class="act-desc">Smooth S-curve, outputs 0-1</span>
+      </button>
+      <button class="act-btn" id="actStep" onclick="setActivation('step')">
+        <span class="act-name">Step Function (1958)</span>
+        <span class="act-desc">Original perceptron, binary output</span>
+      </button>
+      <button class="act-btn" id="actRelu" onclick="setActivation('relu')">
+        <span class="act-name">ReLU (Modern)</span>
+        <span class="act-desc">Deep learning standard, unbounded</span>
+      </button>
+      <div class="act-compare-toggle">
+        <label class="toggle"><input type="checkbox" id="actCompare"><div class="slider"></div></label>
+        <span>Compare All</span>
+      </div>
+    </div>
+    <div class="act-canvas-wrap">
+      <canvas id="activationCanvas" width="500" height="300"></canvas>
+      <div class="act-info" id="actInfo">Sigmoid: smooth gradient, ideal for probability</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SENSITIVITY ANALYSIS ========== -->
+<div class="sensitivity-section">
+  <div class="sensitivity-panel">
+    <div class="sens-controls">
+      <div class="panel-title">Sensitivity Analysis</div>
+      <div class="bc-group">
+        <label>Neuron</label>
+        <select id="sensNeuron">
+          <option value="sleep">Sleep Neuron</option>
+          <option value="bfast">Breakfast Neuron</option>
+        </select>
+      </div>
+      <div class="sens-bar-wrap" id="sensBarChart"></div>
+    </div>
+    <div class="sens-canvas-wrap">
+      <canvas id="sensitivityCanvas" width="500" height="320"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ================================================================
+//  THEMES
+// ================================================================
+const THEMES = {
+  default: {
+    accent: '#6c5ce7', accent2: '#a29bfe',
+    sleepPos: '#00ce9e', sleepNeg: '#6c5ce7',
+    bfastPos: '#fdcb6e', negative: '#ff6b81',
+    bg: '#0a0e1a', panel: '#111827', border: '#1e293b',
+    text: '#c8d6e5', muted: '#636e85'
+  },
+  neon: {
+    accent: '#fd79a8', accent2: '#e84393',
+    sleepPos: '#00cec9', sleepNeg: '#fd79a8',
+    bfastPos: '#ffeaa7', negative: '#ff7675',
+    bg: '#0d0221', panel: '#1a0a2e', border: '#2d1b69',
+    text: '#f8c8dc', muted: '#a855f7'
+  },
+  ocean: {
+    accent: '#0984e3', accent2: '#74b9ff',
+    sleepPos: '#55efc4', sleepNeg: '#0984e3',
+    bfastPos: '#fab1a0', negative: '#e17055',
+    bg: '#041c32', panel: '#04293a', border: '#064663',
+    text: '#d4e4f7', muted: '#5089a8'
+  },
+  ember: {
+    accent: '#e17055', accent2: '#fab1a0',
+    sleepPos: '#fdcb6e', sleepNeg: '#e17055',
+    bfastPos: '#55efc4', negative: '#d63031',
+    bg: '#1a0a00', panel: '#2d1600', border: '#4a2800',
+    text: '#ffecd2', muted: '#b07840'
+  }
+};
+
+let theme = THEMES.default;
+
+function setTheme(name) {
+  theme = THEMES[name];
+  const r = document.documentElement.style;
+  r.setProperty('--accent', theme.accent);
+  r.setProperty('--accent2', theme.accent2);
+  r.setProperty('--sleep-pos', theme.sleepPos);
+  r.setProperty('--bfast-pos', theme.bfastPos);
+  r.setProperty('--negative', theme.negative);
+  r.setProperty('--bg', theme.bg);
+  r.setProperty('--panel', theme.panel);
+  r.setProperty('--border', theme.border);
+  r.setProperty('--text', theme.text);
+  r.setProperty('--muted', theme.muted);
+  r.setProperty('--slider-thumb', theme.accent);
+  r.setProperty('--slider-border', theme.accent2);
+
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('th' + name.charAt(0).toUpperCase() + name.slice(1));
+  if (el) el.classList.add('active');
+  update();
+}
+
+// ================================================================
+//  MUTABLE WEIGHTS
+// ================================================================
+const DEFAULTS = {
+  w1: { wake: 2.0, hang: -3.0, tired: 3.5, sleep: 2.5 }, b1: -3.2,
+  w2: { chain: 1.5, classTime: 3.0, hunger: 2.5 }, b2: -3.0
+};
+
+let w1 = { ...DEFAULTS.w1 }, b1 = DEFAULTS.b1;
+let w2 = { ...DEFAULTS.w2 }, b2 = DEFAULTS.b2;
+let currentActivation = 'sigmoid';
+
+// ================================================================
+//  TRAINING DATA
+// ================================================================
+let sleepData = [];
+let bfastData = [];
+let epoch = 0;
+const LR = 0.5;
+
+function getInputs() {
+  const hoursUntilWake = parseFloat(wakeSlider.value);
+  const peopleHang     = hangToggle.checked ? 1 : 0;
+  const tiredness      = parseInt(tiredSlider.value);
+  const sleepLastNight = parseFloat(sleepSlider.value);
+  const timeBefore     = parseFloat(classSlider.value);
+  const hunger         = parseInt(hungrySlider.value);
+
+  return {
+    s: [1 - hoursUntilWake / 14, peopleHang, tiredness / 10, 1 - sleepLastNight / 12],
+    bRaw: [timeBefore / 4, hunger / 10],
+    raw: { hoursUntilWake, peopleHang, tiredness, sleepLastNight, timeBefore, hunger }
+  };
+}
+
+function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+
+function activeActivation(z) {
+  if (typeof currentActivation === 'undefined' || currentActivation === 'sigmoid') return sigmoid(z);
+  if (currentActivation === 'step') return z >= 0 ? 1 : 0;
+  if (currentActivation === 'relu') return Math.max(0, z);
+  return sigmoid(z);
+}
+
+function forward(sInputs, bInputs) {
+  const z1 = w1.wake * sInputs[0] + w1.hang * sInputs[1] + w1.tired * sInputs[2] + w1.sleep * sInputs[3] + b1;
+  const p1 = activeActivation(z1);
+  const bAll = [p1, bInputs[0], bInputs[1]];
+  const z2 = w2.chain * bAll[0] + w2.classTime * bAll[1] + w2.hunger * bAll[2] + b2;
+  const p2 = activeActivation(z2);
+  return { z1, p1, z2, p2, sInputs, bAll };
+}
+
+function addExample(type, label) {
+  const { s, bRaw } = getInputs();
+  if (type === 'sleep') {
+    sleepData.push({ x: [...s], y: label });
+    showToast(label ? "Labeled: Should sleep here" : "Labeled: Stay up here", 'fun', label ? '😴' : '⚡');
+  } else {
+    const { p1 } = forward(s, bRaw);
+    bfastData.push({ x: [p1, ...bRaw], y: label });
+    showToast(label ? "Labeled: Eat breakfast!" : "Labeled: Skip breakfast", 'bfast', label ? '🍳' : '🏃');
+  }
+  updateStats();
+}
+
+function trainStep() {
+  if (sleepData.length === 0 && bfastData.length === 0) {
+    showToast("Add training examples first! Label some scenarios below.", 'warn', '⚠️');
+    return;
+  }
+
+  // Train sleep neuron
+  for (const ex of sleepData) {
+    const z = w1.wake * ex.x[0] + w1.hang * ex.x[1] + w1.tired * ex.x[2] + w1.sleep * ex.x[3] + b1;
+    const p = sigmoid(z);
+    const err = p - ex.y;
+    w1.wake  -= LR * err * ex.x[0];
+    w1.hang  -= LR * err * ex.x[1];
+    w1.tired -= LR * err * ex.x[2];
+    w1.sleep -= LR * err * ex.x[3];
+    b1       -= LR * err;
+  }
+
+  // Train breakfast neuron
+  for (const ex of bfastData) {
+    const z = w2.chain * ex.x[0] + w2.classTime * ex.x[1] + w2.hunger * ex.x[2] + b2;
+    const p = sigmoid(z);
+    const err = p - ex.y;
+    w2.chain     -= LR * err * ex.x[0];
+    w2.classTime -= LR * err * ex.x[1];
+    w2.hunger    -= LR * err * ex.x[2];
+    b2           -= LR * err;
+  }
+
+  epoch++;
+  updateStats();
+  update();
+}
+
+let trainAnimating = false;
+
+function trainMultiple(n) {
+  if (sleepData.length === 0 && bfastData.length === 0) {
+    showToast("Add training examples first! Label some scenarios below.", 'warn', '⚠️');
+    return;
+  }
+  if (trainAnimating) return;
+  trainAnimating = true;
+
+  let done = 0;
+  const batchSize = Math.max(1, Math.floor(n / 50)); // ~50 visual frames
+
+  function step() {
+    const steps = Math.min(batchSize, n - done);
+    for (let i = 0; i < steps; i++) trainStep();
+    done += steps;
+    if (done < n) {
+      requestAnimationFrame(step);
+    } else {
+      trainAnimating = false;
+      showToast(`Trained ${n} epochs! Loss: ${computeLoss().toFixed(4)}`, 'fun', '🧠');
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function computeLoss() {
+  let total = 0, count = 0;
+  const eps = 1e-7;
+  for (const ex of sleepData) {
+    const z = w1.wake * ex.x[0] + w1.hang * ex.x[1] + w1.tired * ex.x[2] + w1.sleep * ex.x[3] + b1;
+    const p = Math.max(eps, Math.min(1 - eps, sigmoid(z)));
+    total += -(ex.y * Math.log(p) + (1 - ex.y) * Math.log(1 - p));
+    count++;
+  }
+  for (const ex of bfastData) {
+    const z = w2.chain * ex.x[0] + w2.classTime * ex.x[1] + w2.hunger * ex.x[2] + b2;
+    const p = Math.max(eps, Math.min(1 - eps, sigmoid(z)));
+    total += -(ex.y * Math.log(p) + (1 - ex.y) * Math.log(1 - p));
+    count++;
+  }
+  return count > 0 ? total / count : 0;
+}
+
+function resetTraining() {
+  w1 = { ...DEFAULTS.w1 };
+  b1 = DEFAULTS.b1;
+  w2 = { ...DEFAULTS.w2 };
+  b2 = DEFAULTS.b2;
+  sleepData = [];
+  bfastData = [];
+  if (typeof bcPoints !== 'undefined') bcPoints = [];
+  epoch = 0;
+  updateStats();
+  update();
+  showToast("Weights reset to defaults. Training data cleared.", 'fun', '🔄');
+}
+
+function updateStats() {
+  const total = sleepData.length + bfastData.length;
+  document.getElementById('statExamples').textContent = total;
+  document.getElementById('statEpoch').textContent = epoch;
+  const loss = computeLoss();
+  document.getElementById('statLoss').textContent = total > 0 ? loss.toFixed(4) : '--';
+
+  const accEl = document.getElementById('statAcc');
+  if (total > 0 && typeof computeAccuracy === 'function') {
+    const acc = computeAccuracy();
+    accEl.textContent = acc >= 0 ? (acc * 100).toFixed(1) + '%' : '--';
+  } else {
+    accEl.textContent = '--';
+  }
+}
+
+// ================================================================
+//  TOAST POP-UPS
+// ================================================================
+const toastContainer = document.getElementById('toastContainer');
+const toastCooldowns = {};
+
+function showToast(msg, type, emoji) {
+  const key = msg;
+  const now = Date.now();
+  if (toastCooldowns[key] && now - toastCooldowns[key] < 8000) return;
+  toastCooldowns[key] = now;
+
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span class="toast-emoji">${emoji || ''}</span>${msg}`;
+  toastContainer.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 4500);
+}
+
+const TOASTS = {
+  tired10:  { msgs: ["You're running on pure willpower.", "Your brain has officially clocked out.", "Even coffee gave up on you."], emoji: '😵', type: 'sleep' },
+  tired9:   { msgs: ["Your eyelids are staging a rebellion.", "The pillow is whispering your name."], emoji: '😴', type: 'sleep' },
+  tired8:   { msgs: ["The bed is calling. Can you hear it?"], emoji: '🛏️', type: 'sleep' },
+  tired01:  { msgs: ["Did someone replace your blood with espresso?", "Are you even human? So much energy!"], emoji: '⚡', type: 'fun' },
+  hungry10: { msgs: ["Your stomach just filed a formal complaint.", "You could eat an entire dining hall."], emoji: '🍕', type: 'bfast' },
+  hungry9:  { msgs: ["Everything is starting to look like food.", "Is that a snack or a textbook? Hard to tell."], emoji: '😋', type: 'bfast' },
+  hungry8:  { msgs: ["The fridge is calling your name."], emoji: '🍔', type: 'bfast' },
+  hungry01: { msgs: ["Fasting mode: activated.", "Food? Never heard of her."], emoji: '🧘', type: 'fun' },
+  wake01:   { msgs: ["You needed to be asleep YESTERDAY.", "At this point just pull an all-nighter."], emoji: '🚨', type: 'warn' },
+  wake2:    { msgs: ["Tick tock, Grunty. Tick tock."], emoji: '⏰', type: 'warn' },
+  wake13:   { msgs: ["You've got ages. Do whatever you want!"], emoji: '🎉', type: 'fun' },
+  slept01:  { msgs: ["Running on fumes. This is not sustainable.", "Did you even lie down??"], emoji: '💀', type: 'warn' },
+  slept2:   { msgs: ["Your body is sending an invoice for lost sleep."], emoji: '📋', type: 'warn' },
+  class025: { msgs: ["RUN. JUST RUN. Forget breakfast!", "Class started 5 minutes ago in your nightmares."], emoji: '🏃', type: 'warn' },
+  class05:  { msgs: ["You have time for... breathing. That's it."], emoji: '😰', type: 'warn' },
+  class4:   { msgs: ["Brunch energy! Take your time, king."], emoji: '☕', type: 'fun' },
+  sleepHi:  { msgs: ["The neuron has spoken. GO. TO. BED.", "Every fiber of this sigmoid says SLEEP."], emoji: '🌙', type: 'sleep' },
+  sleepLo:  { msgs: ["Sleep? We don't do that here.", "You could run a marathon right now. Probably."], emoji: '💪', type: 'fun' },
+  bfastHi:  { msgs: ["Full breakfast incoming! Eggs, toast, the works!", "Gordon Ramsay would be proud."], emoji: '🍳', type: 'bfast' },
+  bfastLo:  { msgs: ["Breakfast is a distant dream.", "Sprint to class. Coffee if lucky."], emoji: '😩', type: 'bfast' },
+  combo1:   { msgs: ["Your friends want you but your pillow NEEDS you."], emoji: '😩', type: 'fun' },
+  combo2:   { msgs: ["Hungry AND rushing? Grab a granola bar and SPRINT."], emoji: '🥜', type: 'warn' },
+  combo3:   { msgs: ["This is a sleep emergency. Red alert!"], emoji: '🚨', type: 'warn' }
+};
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function checkToasts(raw, p1, p2) {
+  const t = raw.tiredness, h = raw.hunger, w = raw.hoursUntilWake;
+  const sl = raw.sleepLastNight, ct = raw.timeBefore;
+
+  if (t >= 10)     fireToast('tired10');
+  else if (t >= 9) fireToast('tired9');
+  else if (t >= 8) fireToast('tired8');
+  if (t <= 1)      fireToast('tired01');
+
+  if (h >= 10)     fireToast('hungry10');
+  else if (h >= 9) fireToast('hungry9');
+  else if (h >= 8) fireToast('hungry8');
+  if (h <= 1)      fireToast('hungry01');
+
+  if (w <= 1)       fireToast('wake01');
+  else if (w <= 2)  fireToast('wake2');
+  if (w >= 13)      fireToast('wake13');
+
+  if (sl <= 1)      fireToast('slept01');
+  else if (sl <= 2) fireToast('slept2');
+
+  if (ct <= 0.25)      fireToast('class025');
+  else if (ct <= 0.5)  fireToast('class05');
+  if (ct >= 4)         fireToast('class4');
+
+  if (p1 > 0.95) fireToast('sleepHi');
+  if (p1 < 0.05) fireToast('sleepLo');
+  if (p2 > 0.95) fireToast('bfastHi');
+  if (p2 < 0.05) fireToast('bfastLo');
+
+  // combos
+  if (t >= 8 && raw.peopleHang) fireToast('combo1');
+  if (h >= 8 && ct < 0.5)      fireToast('combo2');
+  if (t >= 9 && sl <= 2)       fireToast('combo3');
+}
+
+function fireToast(key) {
+  const t = TOASTS[key];
+  if (t) showToast(pick(t.msgs), t.type, t.emoji);
+}
+
+// ================================================================
+//  DOM REFS
+// ================================================================
+const wakeSlider   = document.getElementById('wakeSlider');
+const hangToggle   = document.getElementById('hangToggle');
+const tiredSlider  = document.getElementById('tiredSlider');
+const sleepSlider  = document.getElementById('sleepSlider');
+const classSlider  = document.getElementById('classSlider');
+const hungrySlider = document.getElementById('hungrySlider');
+
+const neuronCvs  = document.getElementById('neuronCanvas');
+const neuronCtx  = neuronCvs.getContext('2d');
+const sigSleepCvs = document.getElementById('sigSleepCanvas');
+const sigSleepCtx = sigSleepCvs.getContext('2d');
+const sigBfastCvs = document.getElementById('sigBfastCanvas');
+const sigBfastCtx = sigBfastCvs.getContext('2d');
+const probeInfo   = document.getElementById('probeInfo');
+
+// ================================================================
+//  DRAGGABLE PROBE
+// ================================================================
+let probeState = { active: false, canvas: null, z: 0, p: 0 };
+
+function setupProbe(cvs, colorFn, title) {
+  function getZ(e) {
+    const rect = cvs.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;
+    const pad = { l: 36, r: 14 };
+    const logW = title === 'Sleep' ? 280 : 280;
+    const gW = logW - pad.l - pad.r;
+    const relX = mx * logW - pad.l;
+    const t = Math.max(0, Math.min(1, relX / gW));
+    return -8 + t * 16;
+  }
+
+  cvs.addEventListener('mousemove', (e) => {
+    const z = getZ(e);
+    const p = sigmoid(z);
+    probeState = { active: true, canvas: title, z, p };
+    probeInfo.innerHTML = `<b style="color:${colorFn(p)}">${title}</b> probe: z = ${z.toFixed(2)} &rarr; &sigma;(z) = ${p.toFixed(4)} (${(p*100).toFixed(1)}%)`;
+    update(true);
+  });
+
+  cvs.addEventListener('mouseleave', () => {
+    probeState.active = false;
+    probeInfo.textContent = 'Hover over sigmoid curves to explore';
+    update(true);
+  });
+}
+
+// ================================================================
+//  COLORS
+// ================================================================
+function lerpColor(a, b, t) {
+  const ar = parseInt(a.slice(1,3),16), ag = parseInt(a.slice(3,5),16), ab = parseInt(a.slice(5,7),16);
+  const br = parseInt(b.slice(1,3),16), bg = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${bl.toString(16).padStart(2,'0')}`;
+}
+
+function sleepColor(p) { return lerpColor(theme.sleepNeg, theme.sleepPos, p); }
+function bfastColor(p) { return lerpColor(theme.muted, theme.bfastPos, p); }
+
+// ================================================================
+//  UPDATE
+// ================================================================
+function update(skipToasts) {
+  const { s, bRaw, raw } = getInputs();
+  const { z1, p1, z2, p2, sInputs, bAll } = forward(s, bRaw);
+
+  // Input labels
+  document.getElementById('wakeVal').textContent  = raw.hoursUntilWake + ' hrs';
+  document.getElementById('hangVal').textContent   = raw.peopleHang ? 'Yes' : 'No';
+  document.getElementById('hangDesc').textContent  = raw.peopleHang ? 'Friends are calling!' : "Nobody's asking";
+  document.getElementById('tiredVal').textContent  = raw.tiredness + ' / 10';
+  document.getElementById('sleepVal').textContent  = raw.sleepLastNight + ' hrs';
+  document.getElementById('classVal').textContent  = raw.timeBefore + ' hrs';
+  document.getElementById('hungryVal').textContent = raw.hunger + ' / 10';
+  document.getElementById('chainVal').textContent  = (p1 * 100).toFixed(0) + '%';
+  document.getElementById('chainBar').style.width  = (p1 * 100) + '%';
+  document.getElementById('chainBar').style.background = sleepColor(p1);
+
+  // Weight badges (live update during training)
+  document.getElementById('wb1').textContent = `w=${w1.wake >= 0 ? '+' : ''}${w1.wake.toFixed(2)}`;
+  document.getElementById('wb2').textContent = `w=${w1.hang >= 0 ? '+' : ''}${w1.hang.toFixed(2)}`;
+  document.getElementById('wb3').textContent = `w=${w1.tired >= 0 ? '+' : ''}${w1.tired.toFixed(2)}`;
+  document.getElementById('wb4').textContent = `w=${w1.sleep >= 0 ? '+' : ''}${w1.sleep.toFixed(2)}`;
+  document.getElementById('wb5').textContent = `w=${w2.classTime >= 0 ? '+' : ''}${w2.classTime.toFixed(2)}`;
+  document.getElementById('wb6').textContent = `w=${w2.hunger >= 0 ? '+' : ''}${w2.hunger.toFixed(2)}`;
+  document.getElementById('wb7').textContent = `w=${w2.chain >= 0 ? '+' : ''}${w2.chain.toFixed(2)}`;
+
+  // Update badge colors based on sign
+  ['wb1','wb2','wb3','wb4','wb5','wb6','wb7'].forEach(id => {
+    const el = document.getElementById(id);
+    const val = parseFloat(el.textContent.replace('w=',''));
+    el.className = 'weight-badge ' + (val >= 0 ? 'weight-pos' : 'weight-neg');
+  });
+
+  // Clamp for display (ReLU can exceed 1)
+  const p1Disp = Math.min(1, Math.max(0, p1));
+  const p2Disp = Math.min(1, Math.max(0, p2));
+
+  // Sleep ring
+  const circ = 2 * Math.PI * 60;
+  const sCol = sleepColor(p1Disp);
+  document.getElementById('pctSleep').textContent = Math.round(p1Disp * 100) + '%';
+  document.getElementById('pctSleep').style.color = sCol;
+  document.getElementById('ringFillSleep').style.strokeDashoffset = circ * (1 - p1Disp);
+  document.getElementById('ringFillSleep').style.stroke = sCol;
+  document.getElementById('ringSleep').style.boxShadow = `0 0 30px ${sCol}44`;
+
+  const actLabel = typeof currentActivation !== 'undefined' ? currentActivation : 'sigmoid';
+  const vs = document.getElementById('verdictSleep');
+  const vss = document.getElementById('verdictSleepSub');
+  if (p1Disp > 0.8)      { vs.textContent = 'Go to Sleep!';        vs.style.color = theme.sleepPos; vss.textContent = 'Pillow time, Grunty.'; }
+  else if (p1Disp > 0.6) { vs.textContent = 'You Should Sleep';    vs.style.color = lerpColor(theme.sleepPos, theme.text, 0.3); vss.textContent = actLabel + ' says sleepy.'; }
+  else if (p1Disp > 0.4) { vs.textContent = 'Could Go Either Way'; vs.style.color = theme.text; vss.textContent = 'Near the decision boundary.'; }
+  else if (p1Disp > 0.2) { vs.textContent = 'Stay Up a Bit';       vs.style.color = theme.accent2; vss.textContent = "You've got runway."; }
+  else               { vs.textContent = 'Wide Awake!';          vs.style.color = theme.accent; vss.textContent = 'No sleep pressure.'; }
+
+  // Breakfast ring
+  const bCol = bfastColor(p2Disp);
+  document.getElementById('pctBfast').textContent = Math.round(p2Disp * 100) + '%';
+  document.getElementById('pctBfast').style.color = bCol;
+  document.getElementById('ringFillBfast').style.strokeDashoffset = circ * (1 - p2Disp);
+  document.getElementById('ringFillBfast').style.stroke = bCol;
+  document.getElementById('ringBfast').style.boxShadow = `0 0 30px ${bCol}44`;
+
+  const vb = document.getElementById('verdictBfast');
+  const vbs = document.getElementById('verdictBfastSub');
+  if (p2Disp > 0.8)      { vb.textContent = 'Make Breakfast!';      vb.style.color = theme.bfastPos; vbs.textContent = 'Plenty of time. Fuel up!'; }
+  else if (p2Disp > 0.6) { vb.textContent = 'Grab Something Quick'; vb.style.color = lerpColor(theme.bfastPos, theme.text, 0.3); vbs.textContent = 'A quick bite is doable.'; }
+  else if (p2Disp > 0.4) { vb.textContent = 'Maybe a Snack';        vb.style.color = theme.text; vbs.textContent = 'Granola bar territory.'; }
+  else if (p2Disp > 0.2) { vb.textContent = 'Probably Skip It';     vb.style.color = theme.accent2; vbs.textContent = "You'll be rushing."; }
+  else               { vb.textContent = 'No Time at All';        vb.style.color = theme.muted; vbs.textContent = 'Sprint to class.'; }
+
+  // Equations
+  document.getElementById('eqSleep').innerHTML =
+    `<span class="tag tag-sleep">Sleep</span>` +
+    `z<sub>1</sub> = <span class="pos">${w1.wake.toFixed(1)}</span>&middot;${sInputs[0].toFixed(2)} ` +
+    `+ <span class="neg">(${w1.hang.toFixed(1)})</span>&middot;${sInputs[1].toFixed(0)} ` +
+    `+ <span class="pos">${w1.tired.toFixed(1)}</span>&middot;${sInputs[2].toFixed(2)} ` +
+    `+ <span class="pos">${w1.sleep.toFixed(1)}</span>&middot;${sInputs[3].toFixed(2)} ` +
+    `+ (${b1.toFixed(1)}) = <span class="hl">${z1.toFixed(2)}</span> &rarr; <span class="hl">${actLabel}=${p1.toFixed(3)}</span>`;
+
+  document.getElementById('eqBfast').innerHTML =
+    `<span class="tag tag-bfast">Bfast</span>` +
+    `z<sub>2</sub> = <span class="chain">${w2.chain.toFixed(1)}</span>&middot;${bAll[0].toFixed(2)} ` +
+    `+ <span class="pos">${w2.classTime.toFixed(1)}</span>&middot;${bAll[1].toFixed(2)} ` +
+    `+ <span class="pos">${w2.hunger.toFixed(1)}</span>&middot;${bAll[2].toFixed(2)} ` +
+    `+ (${b2.toFixed(1)}) = <span class="hl">${z2.toFixed(2)}</span> &rarr; <span class="hl">${actLabel}=${p2.toFixed(3)}</span>`;
+
+  drawChain(sInputs, p1, bAll, p2);
+  drawSigmoid(sigSleepCtx, sigSleepCvs, 280, 180, z1, p1, sleepColor, 'Sleep');
+  drawSigmoid(sigBfastCtx, sigBfastCvs, 280, 180, z2, p2, bfastColor, 'Breakfast');
+
+  if (!skipToasts) checkToasts(raw, p1, p2);
+
+  // Update boundary plot
+  if (typeof drawBoundary === 'function') drawBoundary();
+  if (typeof drawActivation === 'function') drawActivation();
+  if (typeof drawSensitivity === 'function') drawSensitivity();
+}
+
+// ================================================================
+//  DRAW NEURON CHAIN
+// ================================================================
+const CHAIN_W = 580, CHAIN_H = 320;
+
+function drawChain(sInputs, p1, bAll, p2) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = CHAIN_W, H = CHAIN_H;
+  neuronCvs.width = W * dpr;
+  neuronCvs.height = H * dpr;
+  neuronCvs.style.width = W + 'px';
+  neuronCvs.style.height = H + 'px';
+  const ctx = neuronCtx;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const sCol = sleepColor(p1);
+  const bCol = bfastColor(p2);
+
+  const sleepNodes = [
+    { label: 'Wake',  val: sInputs[0], w: w1.wake },
+    { label: 'Hang',  val: sInputs[1], w: w1.hang },
+    { label: 'Tired', val: sInputs[2], w: w1.tired },
+    { label: 'Prev',  val: sInputs[3], w: w1.sleep }
+  ];
+  const inX = 55;
+  const n1X = 190, n1Y = 130;
+  const midX = 310, midY = 80;
+  const n2X = 420, n2Y = 190;
+  const outX = 540, outY = 190;
+
+  const bfNodes = [
+    { label: 'Class',  val: bAll[1], w: w2.classTime, y: 230 },
+    { label: 'Hungry', val: bAll[2], w: w2.hunger,    y: 290 }
+  ];
+  const bfInX = 300;
+
+  // Connections: sleep inputs → neuron 1
+  sleepNodes.forEach((inp, i) => {
+    const y = 40 + i * 55;
+    const thick = Math.abs(inp.val * inp.w) / 4 + 0.5;
+    const alpha = 0.2 + Math.abs(inp.val) * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(inX + 16, y);
+    ctx.lineTo(n1X - 26, n1Y);
+    ctx.strokeStyle = inp.w > 0
+      ? hexAlpha(theme.sleepPos, alpha)
+      : hexAlpha(theme.negative, alpha);
+    ctx.lineWidth = thick;
+    ctx.stroke();
+  });
+
+  // Neuron 1 → output
+  ctx.beginPath();
+  ctx.moveTo(n1X + 26, n1Y);
+  ctx.lineTo(midX - 16, midY);
+  ctx.strokeStyle = sCol + '99';
+  ctx.lineWidth = 2 + p1 * 3;
+  ctx.stroke();
+
+  // Chain curve
+  ctx.beginPath();
+  ctx.moveTo(midX + 16, midY);
+  ctx.bezierCurveTo(midX + 60, midY, n2X - 60, n2Y, n2X - 26, n2Y);
+  ctx.strokeStyle = hexAlpha(theme.bfastPos, 0.3 + p1 * 0.5);
+  ctx.lineWidth = 1.5 + p1 * 2.5;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Breakfast inputs → neuron 2
+  bfNodes.forEach(inp => {
+    const thick = Math.abs(inp.val * inp.w) / 4 + 0.5;
+    const alpha = 0.2 + Math.abs(inp.val) * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(bfInX + 16, inp.y);
+    ctx.lineTo(n2X - 26, n2Y);
+    ctx.strokeStyle = hexAlpha(theme.bfastPos, alpha);
+    ctx.lineWidth = thick;
+    ctx.stroke();
+  });
+
+  // Neuron 2 → output
+  ctx.beginPath();
+  ctx.moveTo(n2X + 26, n2Y);
+  ctx.lineTo(outX - 16, outY);
+  ctx.strokeStyle = bCol + '99';
+  ctx.lineWidth = 2 + p2 * 3;
+  ctx.stroke();
+
+  // Nodes
+  sleepNodes.forEach((inp, i) => {
+    const y = 40 + i * 55;
+    drawNode(ctx, inX, y, 14, inp.label, inp.val.toFixed(2),
+      theme.panel, inp.w > 0 ? theme.sleepPos + '55' : theme.negative + '55', theme.muted);
+  });
+
+  drawNeuronBody(ctx, n1X, n1Y, 24, '\u03C3\u2081', sCol);
+  drawNode(ctx, midX, midY, 14, '', (p1 * 100).toFixed(0) + '%', sCol + '22', sCol, sCol);
+
+  ctx.fillStyle = theme.bfastPos + '88';
+  ctx.font = '9px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('chain', (midX + n2X) / 2, (midY + n2Y) / 2 - 12);
+
+  bfNodes.forEach(inp => {
+    drawNode(ctx, bfInX, inp.y, 14, inp.label, inp.val.toFixed(2),
+      theme.panel, theme.bfastPos + '44', theme.muted);
+  });
+
+  drawNeuronBody(ctx, n2X, n2Y, 24, '\u03C3\u2082', bCol);
+  drawNode(ctx, outX, outY, 14, '', (p2 * 100).toFixed(0) + '%', bCol + '22', bCol, bCol);
+}
+
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function drawNode(ctx, x, y, r, label, sub, fill, stroke, textCol) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = stroke;
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (label) { ctx.fillStyle = textCol; ctx.font = '9px system-ui'; ctx.fillText(label, x, y - (sub ? 4 : 0)); }
+  if (sub)   { ctx.fillStyle = textCol; ctx.font = 'bold 8px monospace'; ctx.fillText(sub, x, y + (label ? 7 : 1)); }
+}
+
+function drawNeuronBody(ctx, x, y, r, label, col) {
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+  grad.addColorStop(0, col + '44');
+  grad.addColorStop(1, col + '08');
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = col;
+  ctx.stroke();
+  ctx.fillStyle = theme.text;
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x, y);
+}
+
+// ================================================================
+//  DRAW SIGMOID (with probe support)
+// ================================================================
+function drawSigmoid(ctx, cvs, logW, logH, zVal, pVal, colorFn, title) {
+  const dpr = window.devicePixelRatio || 1;
+  cvs.width = logW * dpr;
+  cvs.height = logH * dpr;
+  cvs.style.width = logW + 'px';
+  cvs.style.height = logH + 'px';
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, logW, logH);
+
+  const pad = { l: 36, r: 14, t: 22, b: 24 };
+  const gW = logW - pad.l - pad.r;
+  const gH = logH - pad.t - pad.b;
+  const zMin = -8, zMax = 8;
+
+  function toX(z) { return pad.l + (z - zMin) / (zMax - zMin) * gW; }
+  function toY(s) { return pad.t + (1 - s) * gH; }
+
+  // Title
+  ctx.fillStyle = theme.muted;
+  ctx.font = 'bold 9px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(title, pad.l, 12);
+
+  // Grid
+  ctx.strokeStyle = theme.border;
+  ctx.lineWidth = 1;
+  for (let s = 0; s <= 1; s += 0.5) {
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(s)); ctx.lineTo(pad.l + gW, toY(s)); ctx.stroke();
+  }
+  for (let z = -6; z <= 6; z += 3) {
+    ctx.beginPath(); ctx.moveTo(toX(z), pad.t); ctx.lineTo(toX(z), pad.t + gH); ctx.stroke();
+  }
+
+  // 0.5 boundary
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = theme.muted + '33';
+  ctx.beginPath(); ctx.moveTo(pad.l, toY(0.5)); ctx.lineTo(pad.l + gW, toY(0.5)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Axis labels
+  ctx.fillStyle = theme.muted;
+  ctx.font = '8px system-ui';
+  ctx.textAlign = 'center';
+  for (let z = -6; z <= 6; z += 3) ctx.fillText(z, toX(z), pad.t + gH + 14);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('0', pad.l - 4, toY(0));
+  ctx.fillText('1', pad.l - 4, toY(1));
+
+  // Curve
+  const col = colorFn(pVal);
+  ctx.beginPath();
+  for (let px = 0; px <= gW; px++) {
+    const z = zMin + (px / gW) * (zMax - zMin);
+    const s = sigmoid(z);
+    px === 0 ? ctx.moveTo(pad.l + px, toY(s)) : ctx.lineTo(pad.l + px, toY(s));
+  }
+  ctx.strokeStyle = col + 'aa';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Fill under to current z
+  const cz = Math.max(zMin, Math.min(zMax, zVal));
+  const endPx = (cz - zMin) / (zMax - zMin) * gW;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, toY(0));
+  for (let px = 0; px <= endPx; px++) {
+    const z = zMin + (px / gW) * (zMax - zMin);
+    ctx.lineTo(pad.l + px, toY(sigmoid(z)));
+  }
+  ctx.lineTo(pad.l + endPx, toY(0));
+  ctx.closePath();
+  ctx.fillStyle = col + '15';
+  ctx.fill();
+
+  // Actual computed dot
+  const dx = toX(cz), dy = toY(pVal);
+  ctx.setLineDash([2, 2]);
+  ctx.strokeStyle = col + '55';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx, toY(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(pad.l, dy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const glow = ctx.createRadialGradient(dx, dy, 0, dx, dy, 14);
+  glow.addColorStop(0, col + '44');
+  glow.addColorStop(1, col + '00');
+  ctx.beginPath(); ctx.arc(dx, dy, 14, 0, Math.PI * 2); ctx.fillStyle = glow; ctx.fill();
+
+  ctx.beginPath(); ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  ctx.fillStyle = theme.text;
+  ctx.font = 'bold 9px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(`z=${zVal.toFixed(1)}`, dx + 8, dy - 6);
+
+  // Probe dot (if hovering this canvas)
+  if (probeState.active && probeState.canvas === title) {
+    const pz = Math.max(zMin, Math.min(zMax, probeState.z));
+    const pp = sigmoid(pz);
+    const px2 = toX(pz), py2 = toY(pp);
+    const probeCol = colorFn(pp);
+
+    // Crosshair lines
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = probeCol + '88';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px2, pad.t); ctx.lineTo(px2, pad.t + gH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l, py2); ctx.lineTo(pad.l + gW, py2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Probe glow
+    const pGlow = ctx.createRadialGradient(px2, py2, 0, px2, py2, 18);
+    pGlow.addColorStop(0, probeCol + '66');
+    pGlow.addColorStop(1, probeCol + '00');
+    ctx.beginPath(); ctx.arc(px2, py2, 18, 0, Math.PI * 2); ctx.fillStyle = pGlow; ctx.fill();
+
+    // Probe dot
+    ctx.beginPath(); ctx.arc(px2, py2, 6, 0, Math.PI * 2);
+    ctx.fillStyle = probeCol;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([2, 2]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Probe label
+    const labelX = px2 > logW - 80 ? px2 - 60 : px2 + 10;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 9px system-ui';
+    ctx.textAlign = px2 > logW - 80 ? 'right' : 'left';
+    ctx.fillText(`${(pp*100).toFixed(1)}%`, labelX, py2 - 8);
+  }
+}
+
+// ================================================================
+//  DECISION BOUNDARY
+// ================================================================
+const bcNeuronSel = document.getElementById('bcNeuron');
+const bcXSel      = document.getElementById('bcXAxis');
+const bcYSel      = document.getElementById('bcYAxis');
+const bcCvs       = document.getElementById('boundaryCanvas');
+const bcCtx       = bcCvs.getContext('2d');
+const BC_W = 500, BC_H = 500;
+
+const SLEEP_AXES = [
+  { key: 'wake',  label: 'Wake Urgency',  idx: 0 },
+  { key: 'hang',  label: 'People Hanging', idx: 1 },
+  { key: 'tired', label: 'Tiredness',      idx: 2 },
+  { key: 'sleep', label: 'Sleep Deficit',  idx: 3 }
+];
+const BFAST_AXES = [
+  { key: 'chain',     label: 'Sleep Output (chain)', idx: 0 },
+  { key: 'classTime', label: 'Time Before Class',    idx: 1 },
+  { key: 'hunger',    label: 'Hunger',               idx: 2 }
+];
+
+let bcLabel = 1; // 1 = yes, 0 = no
+let bcPoints = []; // {x, y, label, neuron}
+
+function setBCLabel(v) {
+  bcLabel = v;
+  document.getElementById('bcLabelYes').className = 'bc-label-btn' + (v === 1 ? ' active-yes' : '');
+  document.getElementById('bcLabelNo').className  = 'bc-label-btn' + (v === 0 ? ' active-no' : '');
+}
+
+function populateBCAxes() {
+  const neuron = bcNeuronSel.value;
+  const axes = neuron === 'sleep' ? SLEEP_AXES : BFAST_AXES;
+  bcXSel.innerHTML = '';
+  bcYSel.innerHTML = '';
+  axes.forEach((a, i) => {
+    bcXSel.innerHTML += `<option value="${a.key}" ${i === 0 ? 'selected' : ''}>${a.label}</option>`;
+    bcYSel.innerHTML += `<option value="${a.key}" ${i === 1 ? 'selected' : ''}>${a.label}</option>`;
+  });
+  drawBoundary();
+}
+
+bcNeuronSel.addEventListener('change', () => { bcPoints = []; populateBCAxes(); });
+bcXSel.addEventListener('change', () => drawBoundary());
+bcYSel.addEventListener('change', () => drawBoundary());
+
+bcCvs.addEventListener('click', (e) => {
+  const rect = bcCvs.getBoundingClientRect();
+  const scaleX = BC_W / rect.width;
+  const scaleY = BC_H / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  const pad = { l: 50, r: 20, t: 20, b: 40 };
+  const gW = BC_W - pad.l - pad.r;
+  const gH = BC_H - pad.t - pad.b;
+
+  const normX = (mx - pad.l) / gW;
+  const normY = 1 - (my - pad.t) / gH;
+
+  if (normX < 0 || normX > 1 || normY < 0 || normY > 1) return;
+
+  bcPoints.push({ x: normX, y: normY, label: bcLabel, neuron: bcNeuronSel.value });
+
+  // Also add to training data
+  const neuron = bcNeuronSel.value;
+  const axes = neuron === 'sleep' ? SLEEP_AXES : BFAST_AXES;
+  const xKey = bcXSel.value;
+  const yKey = bcYSel.value;
+
+  if (neuron === 'sleep') {
+    const inputs = [0.5, 0.5, 0.5, 0.5]; // defaults for other axes
+    const xIdx = axes.find(a => a.key === xKey).idx;
+    const yIdx = axes.find(a => a.key === yKey).idx;
+    inputs[xIdx] = normX;
+    inputs[yIdx] = normY;
+    sleepData.push({ x: inputs, y: bcLabel });
+  } else {
+    const inputs = [0.5, 0.5, 0.5];
+    const xIdx = axes.find(a => a.key === xKey).idx;
+    const yIdx = axes.find(a => a.key === yKey).idx;
+    inputs[xIdx] = normX;
+    inputs[yIdx] = normY;
+    bfastData.push({ x: inputs, y: bcLabel });
+  }
+
+  updateStats();
+  drawBoundary();
+});
+
+function computeAccuracy() {
+  let correct = 0, total = 0;
+  const eps = 1e-7;
+  for (const ex of sleepData) {
+    const z = w1.wake * ex.x[0] + w1.hang * ex.x[1] + w1.tired * ex.x[2] + w1.sleep * ex.x[3] + b1;
+    const p = sigmoid(z);
+    if ((p >= 0.5 && ex.y === 1) || (p < 0.5 && ex.y === 0)) correct++;
+    total++;
+  }
+  for (const ex of bfastData) {
+    const z = w2.chain * ex.x[0] + w2.classTime * ex.x[1] + w2.hunger * ex.x[2] + b2;
+    const p = sigmoid(z);
+    if ((p >= 0.5 && ex.y === 1) || (p < 0.5 && ex.y === 0)) correct++;
+    total++;
+  }
+  return total > 0 ? correct / total : -1;
+}
+
+function drawBoundary() {
+  const dpr = window.devicePixelRatio || 1;
+  bcCvs.width = BC_W * dpr;
+  bcCvs.height = BC_H * dpr;
+  bcCvs.style.width = BC_W + 'px';
+  bcCvs.style.height = BC_H + 'px';
+  bcCtx.scale(dpr, dpr);
+  bcCtx.clearRect(0, 0, BC_W, BC_H);
+
+  const pad = { l: 50, r: 20, t: 20, b: 40 };
+  const gW = BC_W - pad.l - pad.r;
+  const gH = BC_H - pad.t - pad.b;
+
+  const neuron = bcNeuronSel.value;
+  const axes = neuron === 'sleep' ? SLEEP_AXES : BFAST_AXES;
+  const xKey = bcXSel.value;
+  const yKey = bcYSel.value;
+  const xAxis = axes.find(a => a.key === xKey);
+  const yAxis = axes.find(a => a.key === yKey);
+  if (!xAxis || !yAxis) return;
+
+  // Draw heatmap background
+  const res = 40; // resolution of heatmap grid
+  const cellW = gW / res;
+  const cellH = gH / res;
+
+  for (let ix = 0; ix < res; ix++) {
+    for (let iy = 0; iy < res; iy++) {
+      const normX = (ix + 0.5) / res;
+      const normY = (iy + 0.5) / res;
+
+      let p;
+      if (neuron === 'sleep') {
+        const inputs = [0.5, 0.5, 0.5, 0.5];
+        inputs[xAxis.idx] = normX;
+        inputs[yAxis.idx] = normY;
+        const z = w1.wake * inputs[0] + w1.hang * inputs[1] + w1.tired * inputs[2] + w1.sleep * inputs[3] + b1;
+        p = sigmoid(z);
+      } else {
+        const inputs = [0.5, 0.5, 0.5];
+        inputs[xAxis.idx] = normX;
+        inputs[yAxis.idx] = normY;
+        const z = w2.chain * inputs[0] + w2.classTime * inputs[1] + w2.hunger * inputs[2] + b2;
+        p = sigmoid(z);
+      }
+
+      // Blue → White → Magenta heatmap
+      const t2 = Math.max(0, Math.min(1, p));
+      let r, g, b;
+      if (t2 < 0.5) {
+        const s = t2 / 0.5; // 0→1 over first half
+        r = Math.round(66 + (255 - 66) * s);
+        g = Math.round(133 + (255 - 133) * s);
+        b = Math.round(244 + (255 - 244) * s);
+      } else {
+        const s = (t2 - 0.5) / 0.5; // 0→1 over second half
+        r = Math.round(255 - (255 - 220) * s);
+        g = Math.round(255 - (255 - 50) * s);
+        b = Math.round(255 - (255 - 220) * s);
+      }
+
+      bcCtx.fillStyle = `rgba(${r},${g},${b},0.6)`;
+      bcCtx.fillRect(pad.l + ix * cellW, pad.t + (res - 1 - iy) * cellH, cellW + 0.5, cellH + 0.5);
+    }
+  }
+
+  // Decision boundary line: find where sigmoid(z) = 0.5, i.e. z = 0
+  // For sleep: w_xKey * x + w_yKey * y + (other terms at 0.5) + b = 0
+  // Solve for y at x=0 and x=1
+  const wObj = neuron === 'sleep' ? w1 : w2;
+  const bias = neuron === 'sleep' ? b1 : b2;
+  const wArr = neuron === 'sleep'
+    ? [w1.wake, w1.hang, w1.tired, w1.sleep]
+    : [w2.chain, w2.classTime, w2.hunger];
+
+  const wx = wArr[xAxis.idx];
+  const wy = wArr[yAxis.idx];
+
+  // z = wx*x + wy*y + sum(w_other * 0.5) + b = 0
+  // wy*y = -(wx*x + otherSum + b)
+  let otherSum = bias;
+  wArr.forEach((w, i) => {
+    if (i !== xAxis.idx && i !== yAxis.idx) otherSum += w * 0.5;
+  });
+
+  if (Math.abs(wy) > 1e-6) {
+    const y0 = -(wx * 0 + otherSum) / wy;
+    const y1 = -(wx * 1 + otherSum) / wy;
+
+    bcCtx.beginPath();
+    bcCtx.moveTo(pad.l + 0 * gW, pad.t + (1 - y0) * gH);
+    bcCtx.lineTo(pad.l + 1 * gW, pad.t + (1 - y1) * gH);
+    bcCtx.strokeStyle = '#ffd700';
+    bcCtx.lineWidth = 3;
+    bcCtx.shadowColor = '#ffd700';
+    bcCtx.shadowBlur = 8;
+    bcCtx.stroke();
+    bcCtx.shadowBlur = 0;
+
+    // Label the line
+    const midLX = pad.l + 0.5 * gW;
+    const midLY = pad.t + (1 - (y0 + y1) / 2) * gH;
+    bcCtx.fillStyle = '#ffd700';
+    bcCtx.font = 'bold 10px system-ui';
+    bcCtx.textAlign = 'center';
+    bcCtx.fillText('z = 0 (boundary)', midLX, Math.max(pad.t + 14, Math.min(pad.t + gH - 6, midLY - 8)));
+  }
+
+  // Draw grid lines
+  bcCtx.strokeStyle = theme.border;
+  bcCtx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const x = pad.l + (i / 4) * gW;
+    const y = pad.t + (i / 4) * gH;
+    bcCtx.beginPath(); bcCtx.moveTo(x, pad.t); bcCtx.lineTo(x, pad.t + gH); bcCtx.stroke();
+    bcCtx.beginPath(); bcCtx.moveTo(pad.l, y); bcCtx.lineTo(pad.l + gW, y); bcCtx.stroke();
+  }
+
+  // Axes frame
+  bcCtx.strokeStyle = theme.muted;
+  bcCtx.lineWidth = 1.5;
+  bcCtx.beginPath();
+  bcCtx.moveTo(pad.l, pad.t);
+  bcCtx.lineTo(pad.l, pad.t + gH);
+  bcCtx.lineTo(pad.l + gW, pad.t + gH);
+  bcCtx.stroke();
+
+  // Axis labels
+  bcCtx.fillStyle = theme.muted;
+  bcCtx.font = '10px system-ui';
+  bcCtx.textAlign = 'center';
+  bcCtx.fillText(xAxis.label, pad.l + gW / 2, BC_H - 6);
+  bcCtx.save();
+  bcCtx.translate(12, pad.t + gH / 2);
+  bcCtx.rotate(-Math.PI / 2);
+  bcCtx.fillText(yAxis.label, 0, 0);
+  bcCtx.restore();
+
+  // Tick labels
+  bcCtx.fillStyle = theme.muted;
+  bcCtx.font = '9px monospace';
+  bcCtx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const v = (i / 4).toFixed(2);
+    bcCtx.fillText(v, pad.l + (i / 4) * gW, pad.t + gH + 16);
+  }
+  bcCtx.textAlign = 'right';
+  bcCtx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const v = (i / 4).toFixed(2);
+    bcCtx.fillText(v, pad.l - 6, pad.t + gH - (i / 4) * gH);
+  }
+
+  // Draw points
+  const filteredPoints = bcPoints.filter(pt => pt.neuron === neuron);
+  filteredPoints.forEach(pt => {
+    const px = pad.l + pt.x * gW;
+    const py = pad.t + (1 - pt.y) * gH;
+    const col = pt.label === 1
+      ? (neuron === 'sleep' ? theme.sleepPos : theme.bfastPos)
+      : theme.negative;
+
+    // Glow
+    const glow = bcCtx.createRadialGradient(px, py, 0, px, py, 12);
+    glow.addColorStop(0, hexAlpha(col, 0.4));
+    glow.addColorStop(1, hexAlpha(col, 0));
+    bcCtx.beginPath(); bcCtx.arc(px, py, 12, 0, Math.PI * 2);
+    bcCtx.fillStyle = glow; bcCtx.fill();
+
+    // Dot
+    bcCtx.beginPath(); bcCtx.arc(px, py, 5, 0, Math.PI * 2);
+    bcCtx.fillStyle = col; bcCtx.fill();
+    bcCtx.strokeStyle = '#fff'; bcCtx.lineWidth = 1.5; bcCtx.stroke();
+  });
+
+  // Crosshair dot for current slider position
+  const { s: curS, bRaw: curB } = getInputs();
+  const { p1: curP1 } = forward(curS, curB);
+  let curXVal, curYVal;
+  if (neuron === 'sleep') {
+    const sArr = curS;
+    curXVal = sArr[xAxis.idx];
+    curYVal = sArr[yAxis.idx];
+  } else {
+    const bArr = [curP1, curB[0], curB[1]];
+    curXVal = bArr[xAxis.idx];
+    curYVal = bArr[yAxis.idx];
+  }
+  const chX = pad.l + curXVal * gW;
+  const chY = pad.t + (1 - curYVal) * gH;
+
+  // Crosshair lines
+  bcCtx.setLineDash([4, 3]);
+  bcCtx.strokeStyle = '#ffd700aa';
+  bcCtx.lineWidth = 1;
+  bcCtx.beginPath(); bcCtx.moveTo(chX, pad.t); bcCtx.lineTo(chX, pad.t + gH); bcCtx.stroke();
+  bcCtx.beginPath(); bcCtx.moveTo(pad.l, chY); bcCtx.lineTo(pad.l + gW, chY); bcCtx.stroke();
+  bcCtx.setLineDash([]);
+
+  // Crosshair glow + dot
+  const chGlow = bcCtx.createRadialGradient(chX, chY, 0, chX, chY, 16);
+  chGlow.addColorStop(0, 'rgba(255,215,0,0.5)');
+  chGlow.addColorStop(1, 'rgba(255,215,0,0)');
+  bcCtx.beginPath(); bcCtx.arc(chX, chY, 16, 0, Math.PI * 2); bcCtx.fillStyle = chGlow; bcCtx.fill();
+  bcCtx.beginPath(); bcCtx.arc(chX, chY, 6, 0, Math.PI * 2);
+  bcCtx.fillStyle = '#ffd700'; bcCtx.fill();
+  bcCtx.strokeStyle = '#fff'; bcCtx.lineWidth = 2; bcCtx.stroke();
+
+  // Update stats
+  document.getElementById('bcPoints').textContent = sleepData.length + bfastData.length;
+  const acc = computeAccuracy();
+  const accEl = document.getElementById('bcAccuracy');
+  if (acc < 0) {
+    accEl.textContent = '--';
+    accEl.className = '';
+  } else {
+    const pct = (acc * 100).toFixed(1) + '%';
+    accEl.textContent = pct;
+    accEl.className = acc >= 0.8 ? 'acc-good' : acc >= 0.5 ? 'acc-ok' : 'acc-bad';
+  }
+}
+
+populateBCAxes();
+
+// ================================================================
+//  ACTIVATION FUNCTION SHOWDOWN
+// ================================================================
+const actCvs = document.getElementById('activationCanvas');
+const actCtx = actCvs.getContext('2d');
+const ACT_W = 500, ACT_H = 300;
+const actCompareToggle = document.getElementById('actCompare');
+
+function stepFn(z) { return z >= 0 ? 1 : 0; }
+function relu(z) { return Math.max(0, z); }
+
+const ACT_FUNCS = {
+  sigmoid: { fn: sigmoid, label: 'Sigmoid', color: '#a29bfe', maxY: 1, desc: 'Sigmoid: smooth gradient, ideal for probability' },
+  step:    { fn: stepFn,  label: 'Step',    color: '#ff6b81', maxY: 1, desc: 'Step: binary output, no gradient (1958 perceptron)' },
+  relu:    { fn: relu,    label: 'ReLU',    color: '#55efc4', maxY: 8, desc: 'ReLU: unbounded positive, zero for negatives (modern DL)' }
+};
+
+function setActivation(name) {
+  currentActivation = name;
+  document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('act-active'));
+  document.getElementById('act' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('act-active');
+  document.getElementById('actInfo').textContent = ACT_FUNCS[name].desc;
+  drawActivation();
+  update(true);
+}
+
+actCompareToggle.addEventListener('change', () => drawActivation());
+
+function drawActivation() {
+  const dpr = window.devicePixelRatio || 1;
+  actCvs.width = ACT_W * dpr;
+  actCvs.height = ACT_H * dpr;
+  actCvs.style.width = ACT_W + 'px';
+  actCvs.style.height = ACT_H + 'px';
+  actCtx.scale(dpr, dpr);
+  actCtx.clearRect(0, 0, ACT_W, ACT_H);
+
+  const pad = { l: 50, r: 20, t: 20, b: 30 };
+  const gW = ACT_W - pad.l - pad.r;
+  const gH = ACT_H - pad.t - pad.b;
+  const zMin = -8, zMax = 8;
+  const yMax = actCompareToggle.checked ? 8 : (ACT_FUNCS[currentActivation].maxY === 1 ? 1.1 : 8.5);
+
+  function toX(z) { return pad.l + (z - zMin) / (zMax - zMin) * gW; }
+  function toY(v) { return pad.t + (1 - v / yMax) * gH; }
+
+  // Grid
+  actCtx.strokeStyle = theme.border;
+  actCtx.lineWidth = 1;
+  for (let z = -6; z <= 6; z += 3) {
+    actCtx.beginPath(); actCtx.moveTo(toX(z), pad.t); actCtx.lineTo(toX(z), pad.t + gH); actCtx.stroke();
+  }
+  // Zero axis
+  actCtx.strokeStyle = theme.muted + '44';
+  actCtx.beginPath(); actCtx.moveTo(toX(0), pad.t); actCtx.lineTo(toX(0), pad.t + gH); actCtx.stroke();
+  actCtx.beginPath(); actCtx.moveTo(pad.l, toY(0)); actCtx.lineTo(pad.l + gW, toY(0)); actCtx.stroke();
+
+  // 0.5 line for sigmoid
+  if (currentActivation === 'sigmoid' || actCompareToggle.checked) {
+    actCtx.setLineDash([3, 3]);
+    actCtx.strokeStyle = theme.muted + '33';
+    if (0.5 / yMax <= 1) {
+      actCtx.beginPath(); actCtx.moveTo(pad.l, toY(0.5)); actCtx.lineTo(pad.l + gW, toY(0.5)); actCtx.stroke();
+    }
+    actCtx.setLineDash([]);
+  }
+
+  // Axis labels
+  actCtx.fillStyle = theme.muted;
+  actCtx.font = '9px system-ui';
+  actCtx.textAlign = 'center';
+  for (let z = -6; z <= 6; z += 3) actCtx.fillText(z, toX(z), pad.t + gH + 16);
+  actCtx.textAlign = 'right'; actCtx.textBaseline = 'middle';
+  const ySteps = yMax <= 1.5 ? [0, 0.5, 1] : [0, 2, 4, 6, 8];
+  ySteps.forEach(v => { if (v <= yMax) actCtx.fillText(v, pad.l - 6, toY(v)); });
+
+  // Get current z value
+  const { s, bRaw } = getInputs();
+  const { z1, z2 } = forward(s, bRaw);
+  const curZ = z1; // use sleep neuron z for the marker
+
+  const funcsToPlot = actCompareToggle.checked ? ['sigmoid', 'step', 'relu'] : [currentActivation];
+
+  funcsToPlot.forEach(name => {
+    const af = ACT_FUNCS[name];
+    const isActive = name === currentActivation;
+
+    // Draw curve
+    actCtx.beginPath();
+    for (let px = 0; px <= gW; px++) {
+      const z = zMin + (px / gW) * (zMax - zMin);
+      let val = af.fn(z);
+      if (name === 'step' && z === 0) val = 0.5; // convention at z=0
+      const yPx = toY(Math.min(val, yMax));
+      px === 0 ? actCtx.moveTo(pad.l + px, yPx) : actCtx.lineTo(pad.l + px, yPx);
+    }
+    actCtx.strokeStyle = af.color + (isActive ? 'ee' : '55');
+    actCtx.lineWidth = isActive ? 3 : 1.5;
+    if (!isActive) actCtx.setLineDash([4, 3]);
+    actCtx.stroke();
+    actCtx.setLineDash([]);
+
+    // Label
+    const labelZ = name === 'sigmoid' ? 5 : name === 'step' ? -5 : 3;
+    const labelVal = Math.min(af.fn(labelZ), yMax);
+    actCtx.fillStyle = af.color + (isActive ? 'ee' : '88');
+    actCtx.font = (isActive ? 'bold ' : '') + '10px system-ui';
+    actCtx.textAlign = 'left';
+    actCtx.fillText(af.label, toX(labelZ) + 4, toY(labelVal) - 8);
+
+    // Current z marker (only for active)
+    if (isActive) {
+      const markerVal = Math.min(af.fn(curZ), yMax);
+      const mx = toX(curZ), my = toY(markerVal);
+      const glow = actCtx.createRadialGradient(mx, my, 0, mx, my, 14);
+      glow.addColorStop(0, af.color + '55');
+      glow.addColorStop(1, af.color + '00');
+      actCtx.beginPath(); actCtx.arc(mx, my, 14, 0, Math.PI * 2); actCtx.fillStyle = glow; actCtx.fill();
+      actCtx.beginPath(); actCtx.arc(mx, my, 5, 0, Math.PI * 2);
+      actCtx.fillStyle = af.color; actCtx.fill();
+      actCtx.strokeStyle = '#fff'; actCtx.lineWidth = 1.5; actCtx.stroke();
+      actCtx.fillStyle = theme.text;
+      actCtx.font = 'bold 9px system-ui';
+      actCtx.textAlign = 'left';
+      actCtx.fillText(`z=${curZ.toFixed(1)} → ${markerVal.toFixed(3)}`, mx + 10, my - 6);
+    }
+  });
+}
+
+// ================================================================
+//  SENSITIVITY ANALYSIS
+// ================================================================
+const sensCvs = document.getElementById('sensitivityCanvas');
+const sensCtx = sensCvs.getContext('2d');
+const SENS_W = 500, SENS_H = 320;
+const sensNeuronSel = document.getElementById('sensNeuron');
+
+const SENS_COLORS = ['#a29bfe', '#55efc4', '#fdcb6e', '#ff6b81', '#fd79a8', '#74b9ff'];
+
+sensNeuronSel.addEventListener('change', () => drawSensitivity());
+
+function drawSensitivity() {
+  const dpr = window.devicePixelRatio || 1;
+  sensCvs.width = SENS_W * dpr;
+  sensCvs.height = SENS_H * dpr;
+  sensCvs.style.width = SENS_W + 'px';
+  sensCvs.style.height = SENS_H + 'px';
+  sensCtx.scale(dpr, dpr);
+  sensCtx.clearRect(0, 0, SENS_W, SENS_H);
+
+  const pad = { l: 50, r: 20, t: 20, b: 30 };
+  const gW = SENS_W - pad.l - pad.r;
+  const gH = SENS_H - pad.t - pad.b;
+
+  const neuron = sensNeuronSel.value;
+  const { s: curS, bRaw: curB } = getInputs();
+  const { p1: curP1 } = forward(curS, curB);
+
+  let labels, weights, biasVal, currentInputs;
+  if (neuron === 'sleep') {
+    labels = ['Wake Urgency', 'People Hang', 'Tiredness', 'Sleep Deficit'];
+    weights = [w1.wake, w1.hang, w1.tired, w1.sleep];
+    biasVal = b1;
+    currentInputs = [...curS];
+  } else {
+    labels = ['Sleep Chain', 'Time Before Class', 'Hunger'];
+    weights = [w2.chain, w2.classTime, w2.hunger];
+    biasVal = b2;
+    currentInputs = [curP1, curB[0], curB[1]];
+  }
+
+  function toX(t) { return pad.l + t * gW; }
+  function toY(p) { return pad.t + (1 - p) * gH; }
+
+  // Grid
+  sensCtx.strokeStyle = theme.border;
+  sensCtx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const x = pad.l + (i / 4) * gW;
+    sensCtx.beginPath(); sensCtx.moveTo(x, pad.t); sensCtx.lineTo(x, pad.t + gH); sensCtx.stroke();
+  }
+  for (let p = 0; p <= 1; p += 0.25) {
+    sensCtx.beginPath(); sensCtx.moveTo(pad.l, toY(p)); sensCtx.lineTo(pad.l + gW, toY(p)); sensCtx.stroke();
+  }
+
+  // 0.5 threshold
+  sensCtx.setLineDash([3, 3]);
+  sensCtx.strokeStyle = theme.muted + '44';
+  sensCtx.beginPath(); sensCtx.moveTo(pad.l, toY(0.5)); sensCtx.lineTo(pad.l + gW, toY(0.5)); sensCtx.stroke();
+  sensCtx.setLineDash([]);
+
+  // Axis labels
+  sensCtx.fillStyle = theme.muted;
+  sensCtx.font = '9px system-ui';
+  sensCtx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) sensCtx.fillText((i / 4).toFixed(2), pad.l + (i / 4) * gW, pad.t + gH + 16);
+  sensCtx.textAlign = 'right'; sensCtx.textBaseline = 'middle';
+  for (let p = 0; p <= 1; p += 0.25) sensCtx.fillText(p.toFixed(2), pad.l - 6, toY(p));
+
+  sensCtx.fillStyle = theme.muted;
+  sensCtx.font = '10px system-ui';
+  sensCtx.textAlign = 'center';
+  sensCtx.fillText('Input value (0 → 1)', pad.l + gW / 2, SENS_H - 4);
+
+  // Sweep each input
+  const influences = [];
+  labels.forEach((label, idx) => {
+    const col = SENS_COLORS[idx % SENS_COLORS.length];
+    const steps = 80;
+
+    // Sweep: vary this input 0→1, hold others fixed
+    let minP = 1, maxP = 0;
+    sensCtx.beginPath();
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const inputs = [...currentInputs];
+      inputs[idx] = t;
+      const z = inputs.reduce((sum, v, i) => sum + v * weights[i], biasVal);
+      const p = sigmoid(z);
+      minP = Math.min(minP, p); maxP = Math.max(maxP, p);
+      s === 0 ? sensCtx.moveTo(toX(t), toY(p)) : sensCtx.lineTo(toX(t), toY(p));
+    }
+    sensCtx.strokeStyle = col;
+    sensCtx.lineWidth = 2.5;
+    sensCtx.stroke();
+
+    influences.push({ label, influence: maxP - minP, color: col });
+
+    // Label at right edge
+    const endInputs = [...currentInputs]; endInputs[idx] = 1;
+    const endZ = endInputs.reduce((sum, v, i) => sum + v * weights[i], biasVal);
+    const endP = sigmoid(endZ);
+    sensCtx.fillStyle = col;
+    sensCtx.font = 'bold 9px system-ui';
+    sensCtx.textAlign = 'left';
+    sensCtx.fillText(label, pad.l + gW + 4, toY(endP));
+
+    // Vertical marker at current value
+    const curVal = currentInputs[idx];
+    const curInputs2 = [...currentInputs];
+    curInputs2[idx] = curVal;
+    const curZ2 = curInputs2.reduce((sum, v, i) => sum + v * weights[i], biasVal);
+    const curP2 = sigmoid(curZ2);
+    const mx = toX(curVal), my = toY(curP2);
+
+    sensCtx.setLineDash([2, 2]);
+    sensCtx.strokeStyle = col + '66';
+    sensCtx.lineWidth = 1;
+    sensCtx.beginPath(); sensCtx.moveTo(mx, pad.t); sensCtx.lineTo(mx, pad.t + gH); sensCtx.stroke();
+    sensCtx.setLineDash([]);
+
+    // Marker dot
+    sensCtx.beginPath(); sensCtx.arc(mx, my, 4, 0, Math.PI * 2);
+    sensCtx.fillStyle = col; sensCtx.fill();
+    sensCtx.strokeStyle = '#fff'; sensCtx.lineWidth = 1; sensCtx.stroke();
+  });
+
+  // Update bar chart
+  influences.sort((a, b) => b.influence - a.influence);
+  const maxInf = Math.max(...influences.map(i => i.influence), 0.01);
+  const barContainer = document.getElementById('sensBarChart');
+  barContainer.innerHTML = '<div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;">Influence Ranking</div>';
+  influences.forEach(inf => {
+    const pct = (inf.influence / maxInf * 100).toFixed(0);
+    barContainer.innerHTML += `
+      <div class="sens-bar-row">
+        <span class="sens-bar-label">${inf.label}</span>
+        <div class="sens-bar-track">
+          <div class="sens-bar-fill" style="width:${pct}%;background:${inf.color};"></div>
+        </div>
+        <span class="sens-bar-val">${(inf.influence * 100).toFixed(1)}%</span>
+      </div>`;
+  });
+}
+
+// ================================================================
+//  SCENARIO PRESETS
+// ================================================================
+const SCENARIOS = {
+  sleep: {
+    title: 'Sleep / Breakfast',
+    n1: { name: 'Sleep', inputs: ['Hours Until Wake', 'People Hanging Out', 'Tiredness', 'Sleep Last Night'],
+      sliders: [{min:0,max:14,step:0.5,val:6,fmt:v=>v+' hrs'}, {type:'toggle',val:false}, {min:0,max:10,step:1,val:5,fmt:v=>v+' / 10'}, {min:0,max:12,step:0.5,val:7,fmt:v=>v+' hrs'}],
+      weights: {wake:2.0,hang:-3.0,tired:3.5,sleep:2.5}, bias: -3.2,
+      norm: (r) => [1-r[0]/14, r[1]?1:0, r[2]/10, 1-r[3]/12]
+    },
+    n2: { name: 'Breakfast', inputs: ['Time Before Class', 'How Hungry?'],
+      sliders: [{min:0,max:4,step:0.25,val:1.5,fmt:v=>v+' hrs'}, {min:0,max:10,step:1,val:5,fmt:v=>v+' / 10'}],
+      weights: {chain:1.5,classTime:3.0,hunger:2.5}, bias: -3.0,
+      norm: (r) => [r[0]/4, r[1]/10]
+    },
+    yesText: 'Yes!', noText: 'No!', celebrate: '🎉 The neuron has spoken!',
+  },
+  college: {
+    title: 'Choose a College',
+    n1: { name: 'College', inputs: ['Academic Reputation', 'Campus Vibe', 'Financial Aid', 'Distance from Home'],
+      sliders: [{min:0,max:10,step:1,val:7,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}],
+      weights: {wake:3.0,hang:2.0,tired:2.5,sleep:-1.5}, bias: -3.0,
+      norm: (r) => [r[0]/10, r[1]/10, r[2]/10, r[3]/10]
+    },
+    n2: { name: 'Commit', inputs: ['Parent Approval', 'Friend Going Too'],
+      sliders: [{min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:3,fmt:v=>v+'/10'}],
+      weights: {chain:2.0,classTime:1.5,hunger:1.0}, bias: -2.5,
+      norm: (r) => [r[0]/10, r[1]/10]
+    },
+    yesText: 'Enroll!', noText: 'Keep Looking', celebrate: '🎓 Congratulations, future grad!',
+  },
+  pet: {
+    title: 'Adopt a Pet',
+    n1: { name: 'Adopt?', inputs: ['Free Time Available', 'Living Space', 'Allergy Level', 'Love for Animals'],
+      sliders: [{min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:3,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:8,fmt:v=>v+'/10'}],
+      weights: {wake:2.5,hang:2.0,tired:-3.0,sleep:3.0}, bias: -2.0,
+      norm: (r) => [r[0]/10, r[1]/10, r[2]/10, r[3]/10]
+    },
+    n2: { name: 'Which Pet?', inputs: ['Budget for Vet', 'Partner Wants One'],
+      sliders: [{min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:7,fmt:v=>v+'/10'}],
+      weights: {chain:1.5,classTime:2.0,hunger:2.5}, bias: -3.0,
+      norm: (r) => [r[0]/10, r[1]/10]
+    },
+    yesText: 'Adopt!', noText: 'Wait', celebrate: '🐕 New best friend incoming!',
+  },
+  roadtrip: {
+    title: 'Road Trip?',
+    n1: { name: 'Go?', inputs: ['Days Available', 'Car Condition', 'Budget', 'Travel Buddy'],
+      sliders: [{min:0,max:10,step:1,val:4,fmt:v=>v+' days'}, {min:0,max:10,step:1,val:7,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:5,fmt:v=>'$'+v*100}, {min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}],
+      weights: {wake:2.5,hang:1.5,tired:2.0,sleep:1.5}, bias: -3.5,
+      norm: (r) => [r[0]/10, r[1]/10, r[2]/10, r[3]/10]
+    },
+    n2: { name: 'Destination', inputs: ['Weather Forecast', 'Excitement Level'],
+      sliders: [{min:0,max:10,step:1,val:6,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:7,fmt:v=>v+'/10'}],
+      weights: {chain:2.0,classTime:1.5,hunger:2.5}, bias: -3.0,
+      norm: (r) => [r[0]/10, r[1]/10]
+    },
+    yesText: 'Hit the Road!', noText: 'Stay Home', celebrate: '🚗 Adventure awaits!',
+  },
+  tech: {
+    title: 'Tech Upgrade',
+    n1: { name: 'Upgrade?', inputs: ['Current Device Age', 'Performance Issues', 'Budget Available', 'New Features Wanted'],
+      sliders: [{min:0,max:10,step:1,val:5,fmt:v=>v+' yrs'}, {min:0,max:10,step:1,val:6,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:5,fmt:v=>'$'+v*200}, {min:0,max:10,step:1,val:7,fmt:v=>v+'/10'}],
+      weights: {wake:2.0,hang:3.0,tired:-2.5,sleep:2.0}, bias: -2.0,
+      norm: (r) => [r[0]/10, r[1]/10, r[2]/10, r[3]/10]
+    },
+    n2: { name: 'Which One?', inputs: ['Brand Loyalty', 'Review Score'],
+      sliders: [{min:0,max:10,step:1,val:5,fmt:v=>v+'/10'}, {min:0,max:10,step:1,val:7,fmt:v=>v+'/10'}],
+      weights: {chain:1.5,classTime:2.0,hunger:2.5}, bias: -2.5,
+      norm: (r) => [r[0]/10, r[1]/10]
+    },
+    yesText: 'Buy It!', noText: 'Wait', celebrate: '💻 Upgrade secured!',
+  }
+};
+
+let activeScenario = 'sleep';
+
+function applyScenario(name) {
+  const sc = SCENARIOS[name];
+  if (!sc) return;
+  activeScenario = name;
+
+  // Update chip active states
+  document.querySelectorAll('.scenario-chip').forEach(c => c.classList.remove('sc-active'));
+  const chipId = 'sc' + name.charAt(0).toUpperCase() + name.slice(1);
+  const chip = document.getElementById(chipId);
+  if (chip) chip.classList.add('sc-active');
+
+  // Update weights
+  w1 = { ...sc.n1.weights };
+  b1 = sc.n1.bias;
+  w2 = { ...sc.n2.weights };
+  b2 = sc.n2.bias;
+
+  // Update DEFAULTS for reset
+  DEFAULTS.w1 = { ...sc.n1.weights };
+  DEFAULTS.b1 = sc.n1.bias;
+  DEFAULTS.w2 = { ...sc.n2.weights };
+  DEFAULTS.b2 = sc.n2.bias;
+
+  // Update input labels
+  const n1Inputs = sc.n1.inputs;
+  const n2Inputs = sc.n2.inputs;
+  const section1Label = document.querySelector('.sleep-label');
+  const section2Label = document.querySelector('.bfast-label');
+  if (section1Label) section1Label.textContent = `Neuron 1 — ${sc.n1.name}`;
+  if (section2Label) section2Label.textContent = `Neuron 2 — ${sc.n2.name}`;
+
+  // Update slider labels (reuse the existing DOM elements)
+  const wbEls = ['wb1','wb2','wb3','wb4'];
+  const nameEls = document.querySelectorAll('.inputs-panel .input-group .input-label .name');
+  n1Inputs.forEach((label, i) => {
+    if (nameEls[i]) {
+      const badge = nameEls[i].querySelector('.weight-badge');
+      nameEls[i].textContent = label + ' ';
+      if (badge) nameEls[i].appendChild(badge);
+    }
+  });
+
+  // Update title
+  document.querySelector('h1 span').textContent = `Neuron: ${sc.title}`;
+
+  // Clear training data
+  sleepData = [];
+  bfastData = [];
+  bcPoints = [];
+  epoch = 0;
+  updateStats();
+  update();
+
+  showToast(`Scenario: ${sc.title}`, 'fun', '🔄');
+}
+
+// ================================================================
+//  EVENTS
+// ================================================================
+[wakeSlider, tiredSlider, sleepSlider, classSlider, hungrySlider].forEach(
+  el => el.addEventListener('input', () => update())
+);
+hangToggle.addEventListener('change', () => update());
+
+// Set up probe for both sigmoid canvases
+setupProbe(sigSleepCvs, sleepColor, 'Sleep');
+setupProbe(sigBfastCvs, bfastColor, 'Breakfast');
+
+// Initial render
+update(true);
+</script>
+</body>
+</html>
