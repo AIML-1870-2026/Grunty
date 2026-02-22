@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Readable Explorer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #111827;
+  --surface: #1f2937;
+  --surface2: #111827;
+  --border: #374151;
+  --accent: #6366f1;
+  --accent2: #a78bfa;
+  --fg: #f9fafb;
+  --fg2: #9ca3af;
+  --pass: #4ade80;
+  --pass-bg: #14532d;
+  --fail: #f87171;
+  --fail-bg: #450a0a;
+  --r: #f87171;
+  --g: #4ade80;
+  --b: #60a5fa;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  padding: 20px 24px 40px;
+}
+
+/* ── HEADER ─────────────────────────────────────────── */
+.site-header { text-align: center; margin-bottom: 28px; }
+.site-header h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.site-header p {
+  color: var(--fg2);
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
+/* ── PANELS ─────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.panel + .panel { margin-top: 12px; }
+
+.panel-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg2);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── MAIN LAYOUT ────────────────────────────────────── */
+.main-layout {
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 14px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+/* ── COLOR CONTROLS ─────────────────────────────────── */
+.color-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 2px solid rgba(255,255,255,0.15);
+  flex-shrink: 0;
+}
+.color-hex {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: var(--fg2);
+  letter-spacing: 0.05em;
+}
+
+.rgb-row {
+  display: grid;
+  grid-template-columns: 12px 1fr 56px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ch-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+/* ── RANGE INPUTS ───────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.3);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.4);
+}
+input[type="range"].r-track::-webkit-slider-thumb { background: var(--r); box-shadow: 0 0 0 2px rgba(248,113,113,0.3); }
+input[type="range"].g-track::-webkit-slider-thumb { background: var(--g); box-shadow: 0 0 0 2px rgba(74,222,128,0.3); }
+input[type="range"].b-track::-webkit-slider-thumb { background: var(--b); box-shadow: 0 0 0 2px rgba(96,165,250,0.3); }
+
+/* ── NUMBER INPUTS ──────────────────────────────────── */
+input[type="number"] {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 7px;
+  padding: 4px 7px;
+  font-size: 0.8rem;
+  text-align: right;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s;
+}
+input[type="number"]:focus { border-color: var(--accent); }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* ── SIZE CONTROL ───────────────────────────────────── */
+.size-row {
+  display: grid;
+  grid-template-columns: 1fr 56px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.size-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--fg2);
+  margin-bottom: 8px;
+}
+.size-display {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+/* ── PREVIEW AREA ───────────────────────────────────── */
+.preview-area {
+  border-radius: 10px;
+  padding: 20px 22px;
+  min-height: 130px;
+  line-height: 1.7;
+  outline: none;
+  transition: background-color 0.08s, color 0.08s, font-size 0.1s;
+  resize: vertical;
+  overflow: auto;
+  word-break: break-word;
+  border: 2px dashed transparent;
+}
+.preview-area:focus {
+  border-color: rgba(99,102,241,0.3);
+}
+
+/* ── STATS ──────────────────────────────────────────── */
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.stat-block {
+  background: var(--surface2);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg2);
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.stat-sub {
+  font-size: 0.65rem;
+  color: var(--fg2);
+  margin-top: 3px;
+}
+
+/* Contrast ratio full-width block */
+.contrast-block {
+  background: var(--surface2);
+  border-radius: 9px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.contrast-value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.contrast-unit {
+  font-size: 0.85rem;
+  color: var(--fg2);
+  margin-left: 2px;
+}
+.badges { display: flex; gap: 6px; }
+.badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.badge-pass { background: var(--pass-bg); color: var(--pass); }
+.badge-fail { background: var(--fail-bg); color: var(--fail); }
+
+/* ── COLORBLIND SECTION ─────────────────────────────── */
+.cb-section {
+  max-width: 1300px;
+  margin: 16px auto 0;
+}
+.cb-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cb-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg2);
+}
+.cb-section-desc {
+  font-size: 0.75rem;
+  color: var(--fg2);
+}
+
+.cb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.cb-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.cb-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.cb-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.cb-tag {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.cb-desc {
+  font-size: 0.7rem;
+  color: var(--fg2);
+  line-height: 1.45;
+  margin-bottom: 10px;
+  min-height: 32px;
+}
+.cb-preview {
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  margin-bottom: 10px;
+  transition: background-color 0.1s, color 0.1s;
+}
+.cb-sev-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.cb-sev-label {
+  font-size: 0.63rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg2);
+}
+.cb-sev-row {
+  display: grid;
+  grid-template-columns: 1fr 54px;
+  align-items: center;
+  gap: 8px;
+}
+.cb-sev-val {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────── */
+@media (max-width: 720px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>Readable Explorer</h1>
+  <p>Tune colors, check WCAG contrast, and simulate 8 types of color vision deficiency</p>
+</header>
+
+<!-- ═══ MAIN LAYOUT ══════════════════════════════════ -->
+<div class="main-layout">
+
+  <!-- ─── LEFT: CONTROLS ─────────────────────────── -->
+  <div>
+
+    <!-- Background Color -->
+    <div class="panel">
+      <div class="panel-title">Background Color</div>
+      <div class="color-header">
+        <div class="color-swatch" id="bg-swatch"></div>
+        <span class="color-hex" id="bg-hex">#FFFFFF</span>
+      </div>
+      <div class="rgb-row">
+        <span class="ch-label" style="color:var(--r)">R</span>
+        <input type="range" id="bg-r-sl" class="r-track" min="0" max="255" value="255">
+        <input type="number"  id="bg-r-in" min="0" max="255" value="255">
+      </div>
+      <div class="rgb-row">
+        <span class="ch-label" style="color:var(--g)">G</span>
+        <input type="range" id="bg-g-sl" class="g-track" min="0" max="255" value="255">
+        <input type="number"  id="bg-g-in" min="0" max="255" value="255">
+      </div>
+      <div class="rgb-row">
+        <span class="ch-label" style="color:var(--b)">B</span>
+        <input type="range" id="bg-b-sl" class="b-track" min="0" max="255" value="255">
+        <input type="number"  id="bg-b-in" min="0" max="255" value="255">
+      </div>
+    </div>
+
+    <!-- Text Color -->
+    <div class="panel">
+      <div class="panel-title">Text Color</div>
+      <div class="color-header">
+        <div class="color-swatch" id="text-swatch"></div>
+        <span class="color-hex" id="text-hex">#000000</span>
+      </div>
+      <div class="rgb-row">
+        <span class="ch-label" style="color:var(--r)">R</span>
+        <input type="range" id="tx-r-sl" class="r-track" min="0" max="255" value="0">
+        <input type="number"  id="tx-r-in" min="0" max="255" value="0">
+      </div>
+      <div class="rgb-row">
+        <span class="ch-label" style="color:var(--g)">G</span>
+        <input type="range" id="tx-g-sl" class="g-track" min="0" max="255" value="0">
+        <input type="number"  id="tx-g-in" min="0" max="255" value="0">
+      </div>
+      <div class="rgb-row">
+        <span class="ch-label" style="color:var(--b)">B</span>
+        <input type="range" id="tx-b-sl" class="b-track" min="0" max="255" value="0">
+        <input type="number"  id="tx-b-in" min="0" max="255" value="0">
+      </div>
+    </div>
+
+    <!-- Font Size -->
+    <div class="panel">
+      <div class="panel-title">Text Size</div>
+      <div class="size-label">
+        <span>Font Size</span>
+        <span class="size-display" id="size-display">18 px</span>
+      </div>
+      <div class="size-row">
+        <input type="range"  id="size-sl" min="8" max="72" value="18">
+        <input type="number" id="size-in" min="8" max="72" value="18">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── RIGHT: PREVIEW + STATS ──────────────────── -->
+  <div>
+
+    <!-- Preview -->
+    <div class="panel">
+      <div class="panel-title">Text Preview &nbsp;<span style="font-weight:400;color:var(--fg2);text-transform:none;letter-spacing:0">(click to edit)</span></div>
+      <div
+        class="preview-area"
+        id="preview-area"
+        contenteditable="true"
+        spellcheck="false"
+      >The quick brown fox jumps over the lazy dog.
+Pack my box with five dozen liquor jugs.
+How vividly dazzling her exotic plumage!
+
+WCAG contrast measures the perceptual luminance difference between two colors. A ratio of 4.5:1 passes AA for normal text; 7:1 passes AAA. Large text (18px+ or 14px+ bold) requires only 3:1 for AA and 4.5:1 for AAA.</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="panel">
+      <div class="panel-title">Accessibility Metrics</div>
+
+      <!-- Contrast Ratio -->
+      <div class="contrast-block">
+        <div>
+          <div class="stat-label">Contrast Ratio</div>
+          <div>
+            <span class="contrast-value" id="contrast-ratio">21.00</span>
+            <span class="contrast-unit">: 1</span>
+          </div>
+        </div>
+        <div class="badges">
+          <div class="badge" id="badge-aa">AA ✓</div>
+          <div class="badge" id="badge-aaa">AAA ✓</div>
+        </div>
+      </div>
+
+      <!-- Luminance values -->
+      <div class="stat-row">
+        <div class="stat-block">
+          <div class="stat-label">Background Luminance</div>
+          <div class="stat-value" id="bg-lum">1.0000</div>
+          <div class="stat-sub">Relative (0 = black, 1 = white)</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Text Luminance</div>
+          <div class="stat-value" id="tx-lum">0.0000</div>
+          <div class="stat-sub">Relative (0 = black, 1 = white)</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ COLORBLINDNESS SIMULATIONS ══════════════════ -->
+<div class="cb-section">
+
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-title">Colorblindness Simulations</div>
+    <p style="font-size:0.78rem;color:var(--fg2);margin-top:2px;line-height:1.5">
+      Each card simulates how a person with that condition perceives your chosen colors.
+      Drag the <strong style="color:var(--fg)">Severity</strong> slider from 0% (normal vision) to 100% (full condition).
+      Anomalous trichromacy types default to 50% to reflect typical real-world severity.
+    </p>
+  </div>
+
+  <div class="cb-grid" id="cb-grid"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════ -->
+<script>
+// ── STATE ────────────────────────────────────────────
+const S = {
+  bg:   { r: 255, g: 255, b: 255 },
+  text: { r:   0, g:   0, b:   0 },
+  size: 18
+};
+
+// ── UTILITIES ────────────────────────────────────────
+const clamp = (v, lo = 0, hi = 255) => Math.max(lo, Math.min(hi, v));
+
+function toHex(r, g, b) {
+  return '#' + [r, g, b]
+    .map(v => clamp(Math.round(v)).toString(16).padStart(2, '0'))
+    .join('').toUpperCase();
+}
+
+function toLinear(c8) {
+  const v = c8 / 255;
+  return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(r, g, b) {
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+function contrastRatio(l1, l2) {
+  const hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// ── COLORBLIND SIMULATION ────────────────────────────
+// Matrices: [R_out, G_out, B_out] rows from [R, G, B] inputs
+const CB_TYPES = [
+  {
+    id: 'protanopia', name: 'Protanopia', tag: 'Dichromacy', tagBg: '#3b1a7a', tagFg: '#c4b5fd',
+    desc: 'Missing L (long/red) cones — cannot distinguish red from green. Affects ~1% of males.',
+    mat: [[0.56667, 0.43333, 0.00000],
+          [0.55833, 0.44167, 0.00000],
+          [0.00000, 0.24167, 0.75833]],
+    defSev: 100
+  },
+  {
+    id: 'deuteranopia', name: 'Deuteranopia', tag: 'Dichromacy', tagBg: '#3b1a7a', tagFg: '#c4b5fd',
+    desc: 'Missing M (medium/green) cones. Most common dichromatic CVD (~1% of males).',
+    mat: [[0.62500, 0.37500, 0.00000],
+          [0.70000, 0.30000, 0.00000],
+          [0.00000, 0.30000, 0.70000]],
+    defSev: 100
+  },
+  {
+    id: 'tritanopia', name: 'Tritanopia', tag: 'Dichromacy', tagBg: '#3b1a7a', tagFg: '#c4b5fd',
+    desc: 'Missing S (short/blue) cones — blue/yellow confusion. Very rare (~0.003%).',
+    mat: [[0.95000, 0.05000, 0.00000],
+          [0.00000, 0.43333, 0.56667],
+          [0.00000, 0.47500, 0.52500]],
+    defSev: 100
+  },
+  {
+    id: 'protanomaly', name: 'Protanomaly', tag: 'Anomalous Trichromacy', tagBg: '#451a03', tagFg: '#fdba74',
+    desc: 'Shifted/weakened L cones — red appears dimmer; partial red-green confusion.',
+    mat: [[0.56667, 0.43333, 0.00000],
+          [0.55833, 0.44167, 0.00000],
+          [0.00000, 0.24167, 0.75833]],
+    defSev: 50
+  },
+  {
+    id: 'deuteranomaly', name: 'Deuteranomaly', tag: 'Anomalous Trichromacy', tagBg: '#451a03', tagFg: '#fdba74',
+    desc: 'Shifted M cones — most common CVD overall (~5% males, 0.4% females).',
+    mat: [[0.62500, 0.37500, 0.00000],
+          [0.70000, 0.30000, 0.00000],
+          [0.00000, 0.30000, 0.70000]],
+    defSev: 50
+  },
+  {
+    id: 'tritanomaly', name: 'Tritanomaly', tag: 'Anomalous Trichromacy', tagBg: '#451a03', tagFg: '#fdba74',
+    desc: 'Shifted S cones — partial blue-yellow confusion. Very rare (~0.01%).',
+    mat: [[0.95000, 0.05000, 0.00000],
+          [0.00000, 0.43333, 0.56667],
+          [0.00000, 0.47500, 0.52500]],
+    defSev: 50
+  },
+  {
+    id: 'achromatopsia', name: 'Achromatopsia', tag: 'Monochromacy', tagBg: '#1f2937', tagFg: '#9ca3af',
+    desc: 'Complete color blindness — only brightness perceived, no hue at all. Extremely rare.',
+    mat: null, // grayscale special case
+    defSev: 100
+  },
+  {
+    id: 'achromatomaly', name: 'Achromatomaly', tag: 'Partial Monochromacy', tagBg: '#1f2937', tagFg: '#9ca3af',
+    desc: 'Severely reduced color perception. Very rare; often paired with low visual acuity.',
+    mat: null, // grayscale at partial severity
+    defSev: 50
+  }
+];
+
+function simColor(r, g, b, type, severity) {
+  if (severity === 0) return { r, g, b };
+  const s = severity / 100;
+  let sr, sg, sb;
+
+  if (!type.mat) {
+    // Grayscale (achromatopsia / achromatomaly)
+    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    sr = gray; sg = gray; sb = gray;
+  } else {
+    const m = type.mat;
+    sr = m[0][0]*r + m[0][1]*g + m[0][2]*b;
+    sg = m[1][0]*r + m[1][1]*g + m[1][2]*b;
+    sb = m[2][0]*r + m[2][1]*g + m[2][2]*b;
+  }
+
+  return {
+    r: Math.round(clamp(r + (sr - r) * s)),
+    g: Math.round(clamp(g + (sg - g) * s)),
+    b: Math.round(clamp(b + (sb - b) * s))
+  };
+}
+
+// ── UPDATE ALL ───────────────────────────────────────
+function updateAll() {
+  const { bg, text, size } = S;
+  const bgHex   = toHex(bg.r, bg.g, bg.b);
+  const txHex   = toHex(text.r, text.g, text.b);
+
+  // Swatches / hex labels
+  document.getElementById('bg-swatch').style.background   = bgHex;
+  document.getElementById('text-swatch').style.background = txHex;
+  document.getElementById('bg-hex').textContent   = bgHex;
+  document.getElementById('text-hex').textContent = txHex;
+
+  // Main preview
+  const prev = document.getElementById('preview-area');
+  prev.style.backgroundColor = bgHex;
+  prev.style.color            = txHex;
+  prev.style.fontSize         = size + 'px';
+
+  // Size display
+  document.getElementById('size-display').textContent = size + ' px';
+
+  // Luminance
+  const bgLum = relativeLuminance(bg.r, bg.g, bg.b);
+  const txLum = relativeLuminance(text.r, text.g, text.b);
+  document.getElementById('bg-lum').textContent = bgLum.toFixed(4);
+  document.getElementById('tx-lum').textContent = txLum.toFixed(4);
+
+  // Contrast + badges
+  const ratio   = contrastRatio(bgLum, txLum);
+  const isLarge = size >= 18;           // 18px+ is WCAG "large text"
+  const aaMin   = isLarge ? 3.0  : 4.5;
+  const aaaMin  = isLarge ? 4.5  : 7.0;
+
+  document.getElementById('contrast-ratio').textContent = ratio.toFixed(2);
+
+  const badgeAA  = document.getElementById('badge-aa');
+  const badgeAAA = document.getElementById('badge-aaa');
+
+  badgeAA.textContent  = ratio >= aaMin  ? 'AA ✓'  : 'AA ✗';
+  badgeAA.className    = 'badge ' + (ratio >= aaMin  ? 'badge-pass' : 'badge-fail');
+  badgeAAA.textContent = ratio >= aaaMin ? 'AAA ✓' : 'AAA ✗';
+  badgeAAA.className   = 'badge ' + (ratio >= aaaMin ? 'badge-pass' : 'badge-fail');
+
+  // Colorblind cards
+  CB_TYPES.forEach(t => {
+    const sev   = parseInt(document.getElementById(`cb-sev-sl-${t.id}`).value, 10);
+    const simBg = simColor(bg.r, bg.g, bg.b, t, sev);
+    const simTx = simColor(text.r, text.g, text.b, t, sev);
+    const prev  = document.getElementById(`cb-prev-${t.id}`);
+    prev.style.backgroundColor = toHex(simBg.r, simBg.g, simBg.b);
+    prev.style.color            = toHex(simTx.r, simTx.g, simTx.b);
+  });
+}
+
+// ── SLIDER ↔ INPUT SYNC ──────────────────────────────
+// key  = 'bg' | 'text' | 'size'
+// chan = 'r'|'g'|'b' or null (for size)
+function bindPair(slId, inId, key, chan) {
+  const sl = document.getElementById(slId);
+  const inp = document.getElementById(inId);
+
+  const write = (v) => {
+    v = clamp(v, +sl.min, +sl.max);
+    sl.value  = v;
+    inp.value = v;
+    if (chan) S[key][chan] = v;
+    else      S[key]      = v;
+    updateAll();
+  };
+
+  sl.addEventListener('input', () => write(+sl.value));
+
+  inp.addEventListener('input', () => {
+    const v = parseInt(inp.value, 10);
+    if (!isNaN(v)) write(v);
+  });
+
+  inp.addEventListener('blur', () => {
+    const v = parseInt(inp.value, 10);
+    write(isNaN(v) ? +sl.value : v);
+  });
+}
+
+// ── BUILD COLORBLIND CARDS ───────────────────────────
+function buildCards() {
+  const grid = document.getElementById('cb-grid');
+
+  CB_TYPES.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'cb-card';
+    card.innerHTML = `
+      <div class="cb-card-head">
+        <span class="cb-name">${t.name}</span>
+        <span class="cb-tag" style="background:${t.tagBg};color:${t.tagFg}">${t.tag}</span>
+      </div>
+      <p class="cb-desc">${t.desc}</p>
+      <div class="cb-preview" id="cb-prev-${t.id}">
+        The quick brown fox jumps over the lazy dog.<br>
+        Pack my box with five dozen liquor jugs.
+      </div>
+      <div class="cb-sev-head">
+        <span class="cb-sev-label">Severity</span>
+        <span class="cb-sev-val" id="cb-sev-val-${t.id}">${t.defSev}%</span>
+      </div>
+      <div class="cb-sev-row">
+        <input type="range"  id="cb-sev-sl-${t.id}"  min="0" max="100" value="${t.defSev}">
+        <input type="number" id="cb-sev-in-${t.id}"  min="0" max="100" value="${t.defSev}">
+      </div>
+    `;
+    grid.appendChild(card);
+
+    // Bind severity pair
+    const sl  = document.getElementById(`cb-sev-sl-${t.id}`);
+    const inp = document.getElementById(`cb-sev-in-${t.id}`);
+    const val = document.getElementById(`cb-sev-val-${t.id}`);
+
+    const writeS = (v) => {
+      v = clamp(v, 0, 100);
+      sl.value  = v;
+      inp.value = v;
+      val.textContent = v + '%';
+      updateAll();
+    };
+
+    sl.addEventListener('input',  () => writeS(+sl.value));
+    inp.addEventListener('input', () => { const v = parseInt(inp.value,10); if(!isNaN(v)) writeS(v); });
+    inp.addEventListener('blur',  () => { const v = parseInt(inp.value,10); writeS(isNaN(v) ? +sl.value : v); });
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────
+bindPair('bg-r-sl', 'bg-r-in', 'bg',   'r');
+bindPair('bg-g-sl', 'bg-g-in', 'bg',   'g');
+bindPair('bg-b-sl', 'bg-b-in', 'bg',   'b');
+bindPair('tx-r-sl', 'tx-r-in', 'text', 'r');
+bindPair('tx-g-sl', 'tx-g-in', 'text', 'g');
+bindPair('tx-b-sl', 'tx-b-in', 'text', 'b');
+bindPair('size-sl', 'size-in', 'size',  null);
+
+buildCards();
+updateAll();
+</script>
+</body>
+</html>

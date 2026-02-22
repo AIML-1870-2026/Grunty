@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Readability Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ui-bg: #1a1a2e;
+    --ui-surface: #16213e;
+    --ui-border: #0f3460;
+    --ui-accent: #e94560;
+    --ui-text: #e0e0e0;
+    --ui-muted: #888;
+    --ui-good: #4caf50;
+    --ui-warn: #ff9800;
+    --ui-fail: #f44336;
+    --radius: 8px;
+    --transition: 0.15s ease;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: "header header" "controls preview";
+  }
+
+  /* ── Header ── */
+  header {
+    grid-area: header;
+    background: var(--ui-surface);
+    border-bottom: 1px solid var(--ui-border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.04em; }
+  header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ui-accent); }
+
+  /* ── Controls Panel ── */
+  #controls {
+    grid-area: controls;
+    background: var(--ui-surface);
+    border-right: 1px solid var(--ui-border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section {
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 10px 14px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ui-muted);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--ui-border);
+  }
+  .section-body { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* ── Controls ── */
+  .ctrl-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ctrl-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+  .ctrl-label span { color: var(--ui-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--ui-border);
+    outline: none;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--ui-accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(233,69,96,0.2);
+    transition: box-shadow var(--transition);
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 5px rgba(233,69,96,0.3);
+  }
+
+  /* ── RGB Sliders ── */
+  .rgb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+  }
+  .rgb-preview {
+    flex-shrink: 0;
+    width: 42px; height: 42px;
+    border-radius: var(--radius);
+    border: 2px solid var(--ui-border);
+    transition: background 0.1s ease;
+  }
+  .rgb-hex-display {
+    flex: 1;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius);
+    color: var(--ui-text);
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 8px 10px;
+    cursor: default;
+    user-select: all;
+    outline: none;
+  }
+  .rgb-ch-label { font-weight: 700; min-width: 12px; }
+  .rgb-ch-r { color: #f55; }
+  .rgb-ch-g { color: #5d5; }
+  .rgb-ch-b { color: #58f; }
+
+  input[type="range"].rgb-r { background: linear-gradient(to right, #111, #f44336); }
+  input[type="range"].rgb-g { background: linear-gradient(to right, #111, #4caf50); }
+  input[type="range"].rgb-b { background: linear-gradient(to right, #111, #2196f3); }
+
+  input[type="range"].rgb-r::-webkit-slider-thumb { background: #f44336; box-shadow: 0 0 0 3px rgba(244,67,54,0.25); }
+  input[type="range"].rgb-g::-webkit-slider-thumb { background: #4caf50; box-shadow: 0 0 0 3px rgba(76,175,80,0.25); }
+  input[type="range"].rgb-b::-webkit-slider-thumb { background: #2196f3; box-shadow: 0 0 0 3px rgba(33,150,243,0.25); }
+  input[type="range"].rgb-r::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(244,67,54,0.35); }
+  input[type="range"].rgb-g::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(76,175,80,0.35); }
+  input[type="range"].rgb-b::-webkit-slider-thumb:hover { box-shadow: 0 0 0 5px rgba(33,150,243,0.35); }
+
+  /* Font family */
+  select {
+    width: 100%;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius);
+    color: var(--ui-text);
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color var(--transition);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%23888'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  select:focus { border-color: var(--ui-accent); }
+
+  /* Preset swatches */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .preset-btn {
+    height: 28px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.15s;
+  }
+  .preset-btn:hover { transform: scale(1.08); border-color: rgba(255,255,255,0.4); }
+  .preset-btn.active { border-color: white; }
+
+  /* ── Metrics Cards ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .metric-card {
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .metric-card.full { grid-column: 1 / -1; }
+  .metric-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-muted); }
+  .metric-value { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .metric-sub { font-size: 0.7rem; color: var(--ui-muted); }
+
+  /* WCAG badge */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .badge-aa   { background: var(--ui-good);  color: #000; }
+  .badge-aaa  { background: #2196f3; color: #fff; }
+  .badge-fail { background: var(--ui-fail);  color: #fff; }
+  .badge-warn { background: var(--ui-warn);  color: #000; }
+
+  .contrast-bar-wrap {
+    position: relative;
+    height: 6px;
+    background: var(--ui-border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .contrast-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease, background 0.3s ease;
+  }
+  /* WCAG threshold tick marks on the contrast bar */
+  .wcag-tick {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.55);
+    pointer-events: none;
+  }
+  /* Text-size context note */
+  .text-size-note {
+    font-size: 0.68rem;
+    margin-top: 5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--ui-border);
+    line-height: 1.4;
+  }
+
+  /* ── Preview Pane ── */
+  #preview {
+    grid-area: preview;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: var(--ui-surface);
+    border-bottom: 1px solid var(--ui-border);
+    flex-shrink: 0;
+  }
+  .preview-toolbar label { font-size: 0.75rem; color: var(--ui-muted); }
+  .tab-btn {
+    padding: 5px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--ui-border);
+    background: transparent;
+    color: var(--ui-text);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .tab-btn.active { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
+  .tab-btn:not(.active):hover { border-color: var(--ui-muted); }
+
+  .preview-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px;
+    transition: background 0.2s ease;
+  }
+
+  .text-content {
+    max-width: 680px;
+    margin: 0 auto;
+    transition: color 0.2s ease, font-size 0.2s ease, font-family 0.2s ease, line-height 0.2s ease;
+  }
+  .text-content h2 { margin-bottom: 0.6em; font-weight: 700; }
+  .text-content p  { margin-bottom: 1em; }
+  .text-content ul { margin-bottom: 1em; padding-left: 1.4em; }
+  .text-content li { margin-bottom: 0.3em; }
+  .text-content blockquote {
+    border-left: 4px solid currentColor;
+    padding: 0.5em 1em;
+    margin: 1em 0;
+    opacity: 0.75;
+    font-style: italic;
+  }
+
+  /* Luminosity bar viz */
+  .lum-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+  }
+  .lum-bar-track {
+    flex: 1;
+    height: 10px;
+    background: linear-gradient(to right, #000, #fff);
+    border-radius: 5px;
+    position: relative;
+  }
+  .lum-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #000;
+    transition: left 0.25s ease;
+  }
+
+  /* Simulation tabs content */
+  .sim-content { display: none; }
+  .sim-content.active { display: block; }
+
+  /* Simulate vision deficiency overlay */
+  #preview-frame {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius: 3px; }
+
+  /* ── Vision Simulation ── */
+  .vision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .vision-btn {
+    padding: 7px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--ui-border);
+    background: transparent;
+    color: var(--ui-text);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .vision-btn:hover { border-color: var(--ui-muted); background: rgba(255,255,255,0.04); }
+  .vision-btn.active { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }
+  .vision-btn .vb-name { font-weight: 600; display: block; }
+  .vision-btn .vb-sub  { opacity: 0.6; font-size: 0.66rem; }
+  .vision-btn.full { grid-column: 1 / -1; }
+
+  .vision-badge {
+    display: inline-block;
+    margin-left: auto;
+    font-size: 0.6rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.12);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 700px) {
+    body { grid-template-columns: 1fr; grid-template-areas: "header" "controls" "preview"; }
+    #controls { border-right: none; border-bottom: 1px solid var(--ui-border); max-height: 60vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════ SVG VISION FILTERS ════════════ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0">
+  <defs>
+    <!-- Protanopia: red cone absent -->
+    <filter id="f-protanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.56667  0.43333  0        0  0
+        0.55833  0.44167  0        0  0
+        0        0.24167  0.75833  0  0
+        0        0        0        1  0"/>
+    </filter>
+    <!-- Protanomaly: red cone weakened -->
+    <filter id="f-protanomaly" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.81667  0.18333  0        0  0
+        0.33333  0.66667  0        0  0
+        0        0.12500  0.87500  0  0
+        0        0        0        1  0"/>
+    </filter>
+    <!-- Deuteranopia: green cone absent -->
+    <filter id="f-deuteranopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.62500  0.37500  0        0  0
+        0.70000  0.30000  0        0  0
+        0        0.30000  0.70000  0  0
+        0        0        0        1  0"/>
+    </filter>
+    <!-- Deuteranomaly: green cone weakened -->
+    <filter id="f-deuteranomaly" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.80000  0.20000  0        0  0
+        0.25833  0.74167  0        0  0
+        0        0.14167  0.85833  0  0
+        0        0        0        1  0"/>
+    </filter>
+    <!-- Tritanopia: blue cone absent -->
+    <filter id="f-tritanopia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.95000  0.05000  0        0  0
+        0        0.43333  0.56667  0  0
+        0        0.47500  0.52500  0  0
+        0        0        0        1  0"/>
+    </filter>
+    <!-- Tritanomaly: blue cone weakened -->
+    <filter id="f-tritanomaly" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.96667  0.03333  0        0  0
+        0        0.73333  0.26667  0  0
+        0        0.18333  0.81667  0  0
+        0        0        0        1  0"/>
+    </filter>
+    <!-- Achromatopsia: no color (rod monochromacy) -->
+    <filter id="f-achromatopsia" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.299  0.587  0.114  0  0
+        0.299  0.587  0.114  0  0
+        0.299  0.587  0.114  0  0
+        0      0      0      1  0"/>
+    </filter>
+    <!-- Achromatomaly: blue cone monochromacy -->
+    <filter id="f-achromatomaly" color-interpolation-filters="sRGB">
+      <feColorMatrix type="matrix" values="
+        0.61800  0.32000  0.06200  0  0
+        0.16300  0.77500  0.06200  0  0
+        0.16300  0.32000  0.51600  0  0
+        0        0        0        1  0"/>
+    </filter>
+  </defs>
+</svg>
+
+<header>
+  <div class="dot"></div>
+  <h1>Readability Explorer</h1>
+</header>
+
+<!-- ════════════ CONTROLS ════════════ -->
+<div id="controls">
+
+  <!-- Background Color -->
+  <div class="section">
+    <div class="section-header">Background Color</div>
+    <div class="section-body">
+      <div class="rgb-row">
+        <div class="rgb-preview" id="bgPreview" style="background:#ffffff"></div>
+        <input type="text" id="bgHex" class="rgb-hex-display" value="#ffffff" readonly>
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span class="rgb-ch-label rgb-ch-r">R</span> <span id="bgRVal">255</span></div>
+        <input type="range" class="rgb-r" id="bgR" min="0" max="255" value="255">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span class="rgb-ch-label rgb-ch-g">G</span> <span id="bgGVal">255</span></div>
+        <input type="range" class="rgb-g" id="bgG" min="0" max="255" value="255">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span class="rgb-ch-label rgb-ch-b">B</span> <span id="bgBVal">255</span></div>
+        <input type="range" class="rgb-b" id="bgB" min="0" max="255" value="255">
+      </div>
+      <div class="ctrl-label">Presets</div>
+      <div class="preset-grid" id="bgPresets"></div>
+    </div>
+  </div>
+
+  <!-- Text Color -->
+  <div class="section">
+    <div class="section-header">Text Color</div>
+    <div class="section-body">
+      <div class="rgb-row">
+        <div class="rgb-preview" id="fgPreview" style="background:#000000"></div>
+        <input type="text" id="fgHex" class="rgb-hex-display" value="#000000" readonly>
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span class="rgb-ch-label rgb-ch-r">R</span> <span id="fgRVal">0</span></div>
+        <input type="range" class="rgb-r" id="fgR" min="0" max="255" value="0">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span class="rgb-ch-label rgb-ch-g">G</span> <span id="fgGVal">0</span></div>
+        <input type="range" class="rgb-g" id="fgG" min="0" max="255" value="0">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span class="rgb-ch-label rgb-ch-b">B</span> <span id="fgBVal">0</span></div>
+        <input type="range" class="rgb-b" id="fgB" min="0" max="255" value="0">
+      </div>
+      <div class="ctrl-label">Presets</div>
+      <div class="preset-grid" id="fgPresets"></div>
+    </div>
+  </div>
+
+  <!-- Typography -->
+  <div class="section">
+    <div class="section-header">Typography</div>
+    <div class="section-body">
+      <div class="ctrl-row">
+        <div class="ctrl-label">Font Size <span id="fontSizeVal">18px</span></div>
+        <input type="range" id="fontSize" min="10" max="48" value="18">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label">Line Height <span id="lineHeightVal">1.6</span></div>
+        <input type="range" id="lineHeight" min="1" max="3" step="0.05" value="1.6">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label">Letter Spacing <span id="letterSpacingVal">0em</span></div>
+        <input type="range" id="letterSpacing" min="-0.05" max="0.3" step="0.01" value="0">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label">Max Width <span id="maxWidthVal">680px</span></div>
+        <input type="range" id="maxWidth" min="280" max="1100" value="680">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label">Font Family</div>
+        <select id="fontFamily">
+          <option value="'Segoe UI',system-ui,sans-serif">System UI (sans-serif)</option>
+          <option value="Georgia,'Times New Roman',serif">Georgia (serif)</option>
+          <option value="'Courier New',Courier,monospace">Courier New (mono)</option>
+          <option value="'Comic Sans MS',cursive">Comic Sans MS</option>
+          <option value="Arial,Helvetica,sans-serif">Arial</option>
+          <option value="'Trebuchet MS',sans-serif">Trebuchet MS</option>
+          <option value="Verdana,Geneva,sans-serif">Verdana</option>
+          <option value="'Palatino Linotype',Palatino,serif">Palatino</option>
+          <option value="Impact,Haettenschweiler,sans-serif">Impact</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vision Simulation -->
+  <div class="section">
+    <div class="section-header">Vision Simulation</div>
+    <div class="section-body">
+      <div class="vision-grid" id="visionGrid">
+
+        <button class="vision-btn full active" data-filter="none">
+          <span class="vb-name">Normal Vision</span>
+          <span class="vb-sub">No filter applied</span>
+        </button>
+
+        <button class="vision-btn" data-filter="f-protanopia">
+          <span class="vb-name">Protanopia <span class="vision-badge">~1%♂</span></span>
+          <span class="vb-sub">Red cone absent</span>
+        </button>
+        <button class="vision-btn" data-filter="f-protanomaly">
+          <span class="vb-name">Protanomaly <span class="vision-badge">~1%♂</span></span>
+          <span class="vb-sub">Red cone weakened</span>
+        </button>
+
+        <button class="vision-btn" data-filter="f-deuteranopia">
+          <span class="vb-name">Deuteranopia <span class="vision-badge">~1%♂</span></span>
+          <span class="vb-sub">Green cone absent</span>
+        </button>
+        <button class="vision-btn" data-filter="f-deuteranomaly">
+          <span class="vb-name">Deuteranomaly <span class="vision-badge">~5%♂</span></span>
+          <span class="vb-sub">Green cone weakened</span>
+        </button>
+
+        <button class="vision-btn" data-filter="f-tritanopia">
+          <span class="vb-name">Tritanopia <span class="vision-badge">rare</span></span>
+          <span class="vb-sub">Blue cone absent</span>
+        </button>
+        <button class="vision-btn" data-filter="f-tritanomaly">
+          <span class="vb-name">Tritanomaly <span class="vision-badge">rare</span></span>
+          <span class="vb-sub">Blue cone weakened</span>
+        </button>
+
+        <button class="vision-btn" data-filter="f-achromatopsia">
+          <span class="vb-name">Achromatopsia <span class="vision-badge">rare</span></span>
+          <span class="vb-sub">No color (monochromacy)</span>
+        </button>
+        <button class="vision-btn" data-filter="f-achromatomaly">
+          <span class="vb-name">Achromatomaly <span class="vision-badge">rare</span></span>
+          <span class="vb-sub">Blue cone monochromacy</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="section">
+    <div class="section-header">Accessibility Metrics</div>
+    <div class="section-body">
+      <div class="metrics-grid">
+
+        <div class="metric-card full">
+          <div class="metric-label">Contrast Ratio · WCAG 2.1 §1.4.3</div>
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <div class="metric-value" id="contrastVal">21.00:1</div>
+            <span id="wcagBadge" class="badge badge-aaa">AAA</span>
+            <span id="textSizeTag" class="badge" style="background:rgba(255,255,255,0.08);color:var(--ui-muted);font-weight:500">18px · Normal</span>
+          </div>
+          <div class="contrast-bar-wrap">
+            <div class="contrast-bar" id="contrastBar" style="width:100%;background:var(--ui-good)"></div>
+            <!-- Tick marks at WCAG thresholds (log scale: ln(x)/ln(21)*100) -->
+            <div class="wcag-tick" style="left:36.1%" title="3.0:1 — AA Large text minimum"></div>
+            <div class="wcag-tick" style="left:49.4%" title="4.5:1 — AA Normal / AAA Large minimum"></div>
+            <div class="wcag-tick" style="left:63.9%" title="7.0:1 — AAA Normal minimum"></div>
+          </div>
+          <div class="metric-sub" id="wcagDetail" style="margin-top:5px">Passes AA and AAA for all text sizes</div>
+          <div class="text-size-note" id="textSizeNote">Current text qualifies as normal text — AA requires ≥4.5:1, AAA requires ≥7.0:1</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">BG Luminance</div>
+          <div class="metric-value" id="bgLumVal">1.000</div>
+          <div class="lum-bar-track" style="margin-top:6px">
+            <div class="lum-marker" id="bgLumMarker" style="left:100%"></div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">FG Luminance</div>
+          <div class="metric-value" id="fgLumVal">0.000</div>
+          <div class="lum-bar-track" style="margin-top:6px">
+            <div class="lum-marker" id="fgLumMarker" style="left:0%"></div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">AA · Normal text</div>
+          <div class="metric-value" id="aaNormal">✓</div>
+          <div class="metric-sub">≥ 4.5:1 · &lt;24px</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">AA · Large text</div>
+          <div class="metric-value" id="aaLarge">✓</div>
+          <div class="metric-sub">≥ 3.0:1 · ≥24px</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">AAA · Normal text</div>
+          <div class="metric-value" id="aaaNormal">✓</div>
+          <div class="metric-sub">≥ 7.0:1 · &lt;24px</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">AAA · Large text</div>
+          <div class="metric-value" id="aaaLarge">✓</div>
+          <div class="metric-sub">≥ 4.5:1 · ≥24px</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════ PREVIEW ════════════ -->
+<div id="preview">
+  <div class="preview-toolbar">
+    <label>Sample Content:</label>
+    <button class="tab-btn active" data-tab="article">Article</button>
+    <button class="tab-btn" data-tab="ui">UI Snippet</button>
+    <button class="tab-btn" data-tab="code">Code Block</button>
+    <button class="tab-btn" data-tab="custom">Custom</button>
+  </div>
+
+  <div class="preview-area" id="previewArea">
+
+    <!-- Article tab -->
+    <div class="sim-content active text-content" id="tab-article" id="textContent"></div>
+
+    <!-- UI Snippet tab -->
+    <div class="sim-content text-content" id="tab-ui"></div>
+
+    <!-- Code Block tab -->
+    <div class="sim-content text-content" id="tab-code"></div>
+
+    <!-- Custom tab -->
+    <div class="sim-content text-content" id="tab-custom">
+      <div style="margin-bottom:10px;font-size:0.78rem;opacity:0.6">Type or paste your own text below:</div>
+      <div
+        id="customText"
+        contenteditable="true"
+        style="min-height:200px;outline:none;white-space:pre-wrap;"
+      >Your custom text goes here. Edit this to test your own content.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════
+
+const BG_PRESETS = [
+  '#ffffff','#f5f5f5','#1a1a2e','#0d1117',
+  '#fdf6e3','#282c34','#fff9c4','#e8f5e9',
+  '#fce4ec','#e3f2fd','#2d2d2d','#4a4e69',
+];
+const FG_PRESETS = [
+  '#000000','#212121','#ffffff','#e0e0e0',
+  '#1565c0','#b71c1c','#1b5e20','#e65100',
+  '#4a148c','#006064','#ff6f00','#880e4f',
+];
+
+const ARTICLE_HTML = `
+<h2>The Art of Readable Typography</h2>
+<p>Good typography is invisible. When readers are absorbed in content, the typeface, size, and spacing have done their job — guiding the eye without drawing attention to itself. The goal is always to reduce friction between the reader and the idea.</p>
+<blockquote>Typography is two-dimensional architecture, based on experience and imagination, and guided by rules and readability. — Hermann Zapf</blockquote>
+<p>Contrast between text and background is foundational. The Web Content Accessibility Guidelines (WCAG) define a minimum contrast ratio of <strong>4.5:1</strong> for normal text and <strong>3.0:1</strong> for large text (≥ 18pt or ≥ 14pt bold). Enhanced (AAA) standards require <strong>7.0:1</strong> and <strong>4.5:1</strong> respectively.</p>
+<h2>Key Readability Factors</h2>
+<ul>
+  <li><strong>Font size:</strong> 16–20px is comfortable for body text on screens</li>
+  <li><strong>Line height:</strong> 1.4–1.8× the font size aids scanning</li>
+  <li><strong>Line length:</strong> 50–75 characters per line is the typographic sweet spot</li>
+  <li><strong>Letter spacing:</strong> Slight tracking can open up dense text</li>
+  <li><strong>Font choice:</strong> Serif vs. sans-serif depends on context, not mythology</li>
+</ul>
+<p>Luminance — the perceived brightness of a color — drives contrast calculations. It is computed from linearized RGB channel values using the formula defined in WCAG 2.x, which approximates human perception. Neither hue nor saturation directly affect luminance.</p>
+<p>Use the controls on the left to explore how each variable shapes legibility. Small adjustments compound: a shift in background shade combined with a size increase can swing a failing ratio into full AAA compliance.</p>
+`;
+
+const UI_HTML = `
+<h2>UI Component Preview</h2>
+<p>This simulates how your color pair would look in interface elements.</p>
+<div style="padding:16px;border:1px solid currentColor;border-radius:8px;margin-bottom:16px;opacity:0.9">
+  <strong>Alert Card</strong><br>
+  Your session is about to expire. Please save your work.
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+  <label style="font-size:0.85em;opacity:0.8">Email address</label>
+  <div style="padding:10px 14px;border:1px solid currentColor;border-radius:6px;opacity:0.7;font-size:0.9em">user@example.com</div>
+</div>
+<div style="display:inline-block;padding:10px 24px;border:2px solid currentColor;border-radius:6px;font-weight:600;cursor:pointer;margin-bottom:16px">
+  Primary Button
+</div>
+<p style="font-size:0.8em;opacity:0.65">Caption text — slightly smaller, often used for labels, metadata, and footnotes. Must maintain a minimum contrast ratio even at reduced sizes if using WCAG AA.</p>
+<div style="padding:12px;background:rgba(128,128,128,0.1);border-radius:6px;margin-top:8px;font-size:0.85em">
+  Info box with a subtle background tint. Background tints reduce effective contrast — check the ratio even on subtle washes.
+</div>
+`;
+
+const CODE_HTML = `
+<h2>Code Legibility Test</h2>
+<p>Monospaced fonts and code displays have unique readability demands. Scanability of character shapes (e.g., <code>0</code> vs <code>O</code>, <code>1</code> vs <code>l</code> vs <code>I</code>) matters as much as contrast.</p>
+<pre style="font-family:'Courier New',Courier,monospace;font-size:0.88em;line-height:1.6;padding:16px;border:1px solid currentColor;border-radius:6px;white-space:pre-wrap;margin-bottom:16px">
+function relativeLuminance(r, g, b) {
+  const lin = (c) => {
+    const s = c / 255;
+    return s <= 0.04045
+      ? s / 12.92
+      : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrastRatio(lum1, lum2) {
+  const L1 = Math.max(lum1, lum2);
+  const L2 = Math.min(lum1, lum2);
+  return (L1 + 0.05) / (L2 + 0.05);
+}</pre>
+<p>The numbers <code>0.2126</code>, <code>0.7152</code>, and <code>0.0722</code> are the luminance coefficients for red, green, and blue in the sRGB color space, reflecting the human eye's varying sensitivity to each channel.</p>
+`;
+
+// ═══════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════
+
+const bgR = document.getElementById('bgR');
+const bgG = document.getElementById('bgG');
+const bgB = document.getElementById('bgB');
+const bgRVal = document.getElementById('bgRVal');
+const bgGVal = document.getElementById('bgGVal');
+const bgBVal = document.getElementById('bgBVal');
+const bgHexDisplay = document.getElementById('bgHex');
+const bgPreview    = document.getElementById('bgPreview');
+
+const fgR = document.getElementById('fgR');
+const fgG = document.getElementById('fgG');
+const fgB = document.getElementById('fgB');
+const fgRVal = document.getElementById('fgRVal');
+const fgGVal = document.getElementById('fgGVal');
+const fgBVal = document.getElementById('fgBVal');
+const fgHexDisplay = document.getElementById('fgHex');
+const fgPreview    = document.getElementById('fgPreview');
+
+const fontSizeInput  = document.getElementById('fontSize');
+const fontSizeVal    = document.getElementById('fontSizeVal');
+const lineHeightInput= document.getElementById('lineHeight');
+const lineHeightVal  = document.getElementById('lineHeightVal');
+const letterSpacingInput = document.getElementById('letterSpacing');
+const letterSpacingVal   = document.getElementById('letterSpacingVal');
+const maxWidthInput  = document.getElementById('maxWidth');
+const maxWidthVal    = document.getElementById('maxWidthVal');
+const fontFamilySelect   = document.getElementById('fontFamily');
+
+const previewArea    = document.getElementById('previewArea');
+const tabArticle     = document.getElementById('tab-article');
+const tabUi          = document.getElementById('tab-ui');
+const tabCode        = document.getElementById('tab-code');
+
+const contrastVal    = document.getElementById('contrastVal');
+const wcagBadge      = document.getElementById('wcagBadge');
+const wcagDetail     = document.getElementById('wcagDetail');
+const contrastBar    = document.getElementById('contrastBar');
+const bgLumVal       = document.getElementById('bgLumVal');
+const fgLumVal       = document.getElementById('fgLumVal');
+const bgLumMarker    = document.getElementById('bgLumMarker');
+const fgLumMarker    = document.getElementById('fgLumMarker');
+
+const aaNormal       = document.getElementById('aaNormal');
+const aaLarge        = document.getElementById('aaLarge');
+const aaaNormal      = document.getElementById('aaaNormal');
+const aaaLarge       = document.getElementById('aaaLarge');
+const textSizeTag    = document.getElementById('textSizeTag');
+const textSizeNote   = document.getElementById('textSizeNote');
+
+// ═══════════════════════════════════════════════════════════
+//  INIT CONTENT
+// ═══════════════════════════════════════════════════════════
+tabArticle.innerHTML = ARTICLE_HTML;
+tabUi.innerHTML      = UI_HTML;
+tabCode.innerHTML    = CODE_HTML;
+
+// ═══════════════════════════════════════════════════════════
+//  COLOR UTILS
+// ═══════════════════════════════════════════════════════════
+
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  if (h.length === 3) {
+    return {
+      r: parseInt(h[0]+h[0], 16),
+      g: parseInt(h[1]+h[1], 16),
+      b: parseInt(h[2]+h[2], 16),
+    };
+  }
+  return {
+    r: parseInt(h.slice(0,2), 16),
+    g: parseInt(h.slice(2,4), 16),
+    b: parseInt(h.slice(4,6), 16),
+  };
+}
+
+function linSRGB(c) {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance({ r, g, b }) {
+  return 0.2126 * linSRGB(r) + 0.7152 * linSRGB(g) + 0.0722 * linSRGB(b);
+}
+
+function contrastRatio(l1, l2) {
+  const hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+function isValidHex(hex) {
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+
+let state = {
+  bg: '#ffffff',
+  fg: '#000000',
+  fontSize: 18,
+  lineHeight: 1.6,
+  letterSpacing: 0,
+  maxWidth: 680,
+  fontFamily: fontFamilySelect.value,
+};
+
+// ═══════════════════════════════════════════════════════════
+//  PRESETS
+// ═══════════════════════════════════════════════════════════
+
+function buildPresets(containerId, colors, colorKey) {
+  const el = document.getElementById(containerId);
+  colors.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.style.background = c;
+    btn.title = c;
+    btn.addEventListener('click', () => {
+      state[colorKey] = c;
+      syncColorInputs(colorKey, c);
+      update();
+    });
+    el.appendChild(btn);
+  });
+}
+
+buildPresets('bgPresets', BG_PRESETS, 'bg');
+buildPresets('fgPresets', FG_PRESETS, 'fg');
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+}
+
+function syncColorInputs(key, hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const K = key === 'bg';
+  (K ? bgR : fgR).value = r;
+  (K ? bgG : fgG).value = g;
+  (K ? bgB : fgB).value = b;
+  (K ? bgRVal : fgRVal).textContent = r;
+  (K ? bgGVal : fgGVal).textContent = g;
+  (K ? bgBVal : fgBVal).textContent = b;
+  (K ? bgHexDisplay : fgHexDisplay).value = hex;
+  (K ? bgPreview : fgPreview).style.background = hex;
+  highlightActivePreset(key, hex);
+}
+
+function syncFromSliders(key) {
+  const K = key === 'bg';
+  const r = +(K ? bgR : fgR).value;
+  const g = +(K ? bgG : fgG).value;
+  const b = +(K ? bgB : fgB).value;
+  const hex = rgbToHex(r, g, b);
+  state[key] = hex;
+  (K ? bgRVal : fgRVal).textContent = r;
+  (K ? bgGVal : fgGVal).textContent = g;
+  (K ? bgBVal : fgBVal).textContent = b;
+  (K ? bgHexDisplay : fgHexDisplay).value = hex;
+  (K ? bgPreview : fgPreview).style.background = hex;
+  highlightActivePreset(key, hex);
+  update();
+}
+
+function highlightActivePreset(key, hex) {
+  const id = key === 'bg' ? 'bgPresets' : 'fgPresets';
+  document.querySelectorAll(`#${id} .preset-btn`).forEach(btn => {
+    btn.classList.toggle('active', btn.title.toLowerCase() === hex.toLowerCase());
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UPDATE
+// ═══════════════════════════════════════════════════════════
+
+function update() {
+  const { bg, fg, fontSize, lineHeight, letterSpacing, maxWidth, fontFamily } = state;
+
+  // Preview area background
+  previewArea.style.background = bg;
+
+  // Text content styling
+  document.querySelectorAll('.text-content').forEach(el => {
+    el.style.color          = fg;
+    el.style.fontSize       = fontSize + 'px';
+    el.style.lineHeight     = lineHeight;
+    el.style.letterSpacing  = letterSpacing + 'em';
+    el.style.maxWidth       = maxWidth + 'px';
+    el.style.fontFamily     = fontFamily;
+  });
+
+  // Luminance
+  const bgRgb = hexToRgb(bg);
+  const fgRgb = hexToRgb(fg);
+  const bgLum = relativeLuminance(bgRgb);
+  const fgLum = relativeLuminance(fgRgb);
+  const ratio = contrastRatio(bgLum, fgLum);
+
+  // Display luminance
+  bgLumVal.textContent = bgLum.toFixed(4);
+  fgLumVal.textContent = fgLum.toFixed(4);
+  bgLumMarker.style.left = (bgLum * 100).toFixed(1) + '%';
+  fgLumMarker.style.left = (fgLum * 100).toFixed(1) + '%';
+
+  // Display contrast — WCAG 2.1 uses (L1+0.05)/(L2+0.05), displayed to 2dp
+  contrastVal.textContent = ratio.toFixed(2) + ':1';
+
+  // ── WCAG 2.1 §1.4.3 thresholds ──────────────────────────────────────────
+  // Large text: ≥ 18pt (24px) at normal weight, or ≥ 14pt (18.67px) bold.
+  // We track font-size only (not bold), so we use the 18pt / 24px boundary.
+  const isLargeText = fontSize >= 24;
+
+  // All four fixed reference checks (always shown in the grid)
+  const passAA_normal  = ratio >= 4.5;
+  const passAA_large   = ratio >= 3.0;
+  const passAAA_normal = ratio >= 7.0;
+  const passAAA_large  = ratio >= 4.5;
+
+  aaNormal.textContent  = passAA_normal  ? '✓' : '✗';
+  aaLarge.textContent   = passAA_large   ? '✓' : '✗';
+  aaaNormal.textContent = passAAA_normal ? '✓' : '✗';
+  aaaLarge.textContent  = passAAA_large  ? '✓' : '✗';
+
+  aaNormal.style.color  = passAA_normal  ? 'var(--ui-good)' : 'var(--ui-fail)';
+  aaLarge.style.color   = passAA_large   ? 'var(--ui-good)' : 'var(--ui-fail)';
+  aaaNormal.style.color = passAAA_normal ? '#2196f3'        : 'var(--ui-fail)';
+  aaaLarge.style.color  = passAAA_large  ? '#2196f3'        : 'var(--ui-fail)';
+
+  // ── Context-aware badge: what level does THIS font size actually achieve? ──
+  // For large text:  AA ≥ 3.0,  AAA ≥ 4.5
+  // For normal text: AA ≥ 4.5,  AAA ≥ 7.0
+  const reqAA  = isLargeText ? 3.0 : 4.5;
+  const reqAAA = isLargeText ? 4.5 : 7.0;
+
+  let badgeClass, badgeText, barColor, detailText;
+
+  if (ratio >= reqAAA) {
+    badgeClass = 'badge-aaa'; badgeText = 'AAA';
+    barColor   = '#2196f3';
+    detailText = `AAA compliant for ${isLargeText ? 'large' : 'normal'} text (ratio ≥ ${reqAAA}:1).`;
+  } else if (ratio >= reqAA) {
+    badgeClass = 'badge-aa'; badgeText = 'AA';
+    barColor   = 'var(--ui-good)';
+    detailText = `AA compliant for ${isLargeText ? 'large' : 'normal'} text (ratio ≥ ${reqAA}:1). Below AAA threshold of ${reqAAA}:1.`;
+  } else if (ratio >= 3.0) {
+    // Ratio is 3.0–4.5 and text is NOT large
+    badgeClass = 'badge-warn'; badgeText = 'AA Large';
+    barColor   = 'var(--ui-warn)';
+    detailText = `Meets large-text AA minimum (3.0:1) only. Increase font to ≥24px or raise contrast to ≥4.5:1 for normal-text AA.`;
+  } else {
+    badgeClass = 'badge-fail'; badgeText = 'Fail';
+    barColor   = 'var(--ui-fail)';
+    detailText = 'Fails all WCAG 2.1 contrast requirements (minimum is 3.0:1 for large text).';
+  }
+
+  wcagBadge.className    = 'badge ' + badgeClass;
+  wcagBadge.textContent  = badgeText;
+  wcagDetail.textContent = detailText;
+
+  // Text-size context tag + note
+  const sizeLabel = isLargeText ? 'Large text' : 'Normal text';
+  textSizeTag.textContent = `${fontSize}px · ${sizeLabel}`;
+  textSizeNote.textContent = isLargeText
+    ? `At ${fontSize}px this qualifies as WCAG large text (≥18pt/24px) — AA requires ≥3.0:1, AAA requires ≥4.5:1.`
+    : `At ${fontSize}px this is normal text — AA requires ≥4.5:1, AAA requires ≥7.0:1. Use ≥24px (or ≥18.67px bold) for large-text thresholds.`;
+
+  // Bar: scale 1:1 → 21:1 logarithmically for visual spread
+  const pct = Math.min(100, (Math.log(ratio) / Math.log(21)) * 100);
+  contrastBar.style.width      = pct.toFixed(1) + '%';
+  contrastBar.style.background = barColor;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EVENT LISTENERS — RGB Sliders
+// ═══════════════════════════════════════════════════════════
+
+[bgR, bgG, bgB].forEach(el => el.addEventListener('input', () => syncFromSliders('bg')));
+[fgR, fgG, fgB].forEach(el => el.addEventListener('input', () => syncFromSliders('fg')));
+
+// ═══════════════════════════════════════════════════════════
+//  EVENT LISTENERS — Typography
+// ═══════════════════════════════════════════════════════════
+
+fontSizeInput.addEventListener('input', () => {
+  state.fontSize = +fontSizeInput.value;
+  fontSizeVal.textContent = state.fontSize + 'px';
+  update();
+});
+lineHeightInput.addEventListener('input', () => {
+  state.lineHeight = +lineHeightInput.value;
+  lineHeightVal.textContent = state.lineHeight.toFixed(2);
+  update();
+});
+letterSpacingInput.addEventListener('input', () => {
+  state.letterSpacing = +letterSpacingInput.value;
+  letterSpacingVal.textContent = state.letterSpacing.toFixed(2) + 'em';
+  update();
+});
+maxWidthInput.addEventListener('input', () => {
+  state.maxWidth = +maxWidthInput.value;
+  maxWidthVal.textContent = state.maxWidth + 'px';
+  update();
+});
+fontFamilySelect.addEventListener('change', () => {
+  state.fontFamily = fontFamilySelect.value;
+  update();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  EVENT LISTENERS — Tabs
+// ═══════════════════════════════════════════════════════════
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.sim-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  VISION SIMULATION
+// ═══════════════════════════════════════════════════════════
+
+document.querySelectorAll('#visionGrid .vision-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#visionGrid .vision-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filterId = btn.dataset.filter;
+    previewArea.style.filter = filterId === 'none' ? '' : `url(#${filterId})`;
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INITIAL RENDER
+// ═══════════════════════════════════════════════════════════
+highlightActivePreset('bg', state.bg);
+highlightActivePreset('fg', state.fg);
+update();
+</script>
+</body>
+</html>
