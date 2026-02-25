@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Security: block all external resources; only inline styles/scripts allowed -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<title>Blackjack — Entertainment Only</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: radial-gradient(ellipse at center, #1a4a2e 0%, #0d2b1a 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #f0e8d0;
+    user-select: none;
+    padding-bottom: 32px;
+  }
+
+  /* ── Responsible Gambling Banner ── */
+  #rg-banner {
+    width: 100%;
+    background: #111827;
+    border-bottom: 2px solid #f5d060;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: #d0c8b0;
+    margin-bottom: 8px;
+  }
+  .rg-warning { color: #f5d060; font-weight: bold; }
+  #rg-actions { display: flex; gap: 6px; align-items: center; }
+  .rg-btn {
+    padding: 3px 10px;
+    border: 1px solid #f5d060;
+    background: transparent;
+    color: #f5d060;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .rg-btn:hover { background: #f5d06022; }
+  .rg-btn.rg-break { border-color: #ff9966; color: #ff9966; }
+  .rg-btn.rg-break:hover { background: #ff996622; }
+
+  h1 {
+    margin: 10px 0 6px;
+    font-size: 2.2rem;
+    letter-spacing: 4px;
+    color: #f5d060;
+    text-shadow: 0 2px 8px #000a;
+  }
+
+  /* ── Bankroll bar ── */
+  #bankroll-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 10px;
+    font-size: 0.92rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #balance-display { font-size: 1.2rem; font-weight: bold; color: #f5d060; }
+  #session-stats { font-size: 0.78rem; color: #a8d8a8; }
+  .net-pos { color: #7dff7d; }
+  .net-neg { color: #ff7d7d; }
+  .net-zer { color: #f0e8d0; }
+
+  /* ── Table ── */
+  #table {
+    width: min(700px, 98vw);
+    background: radial-gradient(ellipse at center, #206040 0%, #154530 100%);
+    border-radius: 24px;
+    border: 4px solid #8b6914;
+    box-shadow: 0 8px 40px #0008, inset 0 0 40px #0003;
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .area-label {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a8d8a8;
+    margin-bottom: 4px;
+  }
+  .hand-area {
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .score-badge {
+    font-size: 1.1rem;
+    font-weight: bold;
+    background: #0006;
+    border-radius: 8px;
+    padding: 2px 10px;
+    margin-left: 4px;
+    color: #f5d060;
+    min-width: 36px;
+    text-align: center;
+  }
+  .hand-row { display: flex; align-items: center; }
+
+  /* ── Cards ── */
+  .card {
+    width: 60px;
+    height: 88px;
+    border-radius: 8px;
+    background: #fff;
+    border: 2px solid #ccc;
+    box-shadow: 2px 3px 8px #0005;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 6px;
+    font-weight: bold;
+    position: relative;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .card:hover { transform: translateY(-4px); }
+  .card.red   { color: #c0222a; }
+  .card.black { color: #111; }
+  .card.back {
+    background: repeating-linear-gradient(
+      135deg, #1a3a7a, #1a3a7a 4px, #2255aa 4px, #2255aa 8px
+    );
+    border-color: #aaa;
+  }
+  .card-top { font-size: 0.72rem; }
+  .card-suit { font-size: 1.4rem; text-align: center; line-height: 1; }
+  .card-bot  { font-size: 0.72rem; align-self: flex-end; transform: rotate(180deg); }
+
+  /* ── Card dealing animations ── */
+  @keyframes deal-from-top {
+    from { opacity: 0; transform: translateY(-70px) rotate(-10deg) scale(0.8); }
+    to   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  }
+  @keyframes deal-from-bottom {
+    from { opacity: 0; transform: translateY(70px) rotate(10deg) scale(0.8); }
+    to   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  }
+  /* Hole-card flip: scale to 0 mid-way so face switches invisibly */
+  @keyframes hole-flip {
+    0%   { transform: scaleX(1); }
+    40%  { transform: scaleX(0); }
+    60%  { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+  }
+  .card-deal-down { animation: deal-from-top    0.28s cubic-bezier(0.15,0.8,0.3,1) both; }
+  .card-deal-up   { animation: deal-from-bottom 0.28s cubic-bezier(0.15,0.8,0.3,1) both; }
+  .card-flip      { animation: hole-flip 0.38s ease-in-out both; }
+
+  /* ── Post-deal "your turn" animations ── */
+  @keyframes score-pop {
+    0%   { opacity: 0; transform: scale(0.2); }
+    60%  { transform: scale(1.3); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes btn-appear {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes hand-glow {
+    0%, 100% { box-shadow: none; }
+    45%      { box-shadow: 0 0 32px 8px #f5d06066; }
+  }
+  /* backwards fill: element hides during stagger delay, returns to CSS state after */
+  .score-pop  { animation: score-pop  0.4s cubic-bezier(0.2,0.8,0.3,1.5) both; }
+  .btn-appear { animation: btn-appear 0.22s ease-out backwards; }
+  .hand-glow  { animation: hand-glow  1s ease-in-out; }
+
+  .divider { border: none; border-top: 1px solid #3a6a4a; }
+
+  /* ── Bet strip ── */
+  #bet-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 4px dashed #fff8;
+    font-weight: bold; font-size: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+    color: #fff;
+    text-shadow: 0 1px 3px #0008;
+    font-family: inherit;
+  }
+  .chip:hover:not(:disabled) { transform: scale(1.12); box-shadow: 0 0 12px #fff5; }
+  .chip:disabled { opacity: 0.35; cursor: default; }
+  .chip-1   { background: #b22222; }
+  .chip-5   { background: #cc8800; }
+  .chip-10  { background: #2244aa; }
+  .chip-25  { background: #228822; }
+  .chip-100 { background: #6a006a; }
+
+  #bet-display {
+    font-size: 1.05rem; margin-left: auto;
+    background: #0005; border-radius: 8px; padding: 4px 14px;
+  }
+  #bet-display span { color: #f5d060; font-weight: bold; }
+
+  /* ── Action buttons ── */
+  #actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    padding: 10px 22px;
+    border: none; border-radius: 8px;
+    font-size: 1rem; font-family: inherit; font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.1s;
+    letter-spacing: 1px;
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn:disabled { opacity: 0.3; cursor: default; }
+  .btn-deal   { background: #f5d060; color: #1a1a1a; }
+  .btn-hit    { background: #3a9a3a; color: #fff; }
+  .btn-stand  { background: #c03030; color: #fff; }
+  .btn-double { background: #2255cc; color: #fff; }
+  .btn-split  { background: #aa5500; color: #fff; }
+  .btn-clear  { background: #555;    color: #ddd; }
+  .btn-reset  { background: #7a2020; color: #fff; }
+  .btn-close  { background: #335; color: #f0e8d0; }
+
+  /* ── Message ── */
+  #message {
+    text-align: center; font-size: 1.35rem; font-weight: bold;
+    min-height: 1.8em; text-shadow: 0 2px 6px #000a; color: #fff;
+  }
+  #message.win   { color: #7dff7d; }
+  #message.lose  { color: #ff7d7d; }
+  #message.push  { color: #f5d060; }
+  #message.error { color: #ff9966; }
+
+  #split-indicator {
+    font-size: 0.8rem; letter-spacing: 2px;
+    color: #aaa; text-align: center; min-height: 1em;
+  }
+  #table-limits {
+    font-size: 0.68rem; color: #88aa88;
+    text-align: center; letter-spacing: 1px;
+  }
+
+  /* ── History & Footer ── */
+  #history {
+    width: min(700px, 98vw);
+    margin-top: 12px;
+    font-size: 0.78rem; color: #a8d8a8;
+    text-align: center; min-height: 1.2em; letter-spacing: 1px;
+  }
+  #rg-footer {
+    width: min(700px, 98vw);
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: #0d1a0d;
+    border: 1px solid #3a6a4a;
+    border-radius: 8px;
+    font-size: 0.7rem; color: #88aa88;
+    text-align: center; line-height: 1.9;
+  }
+  #rg-footer strong { color: #f5d060; }
+  #rg-footer a { color: #88ccaa; }
+
+  /* ── Modal ── */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #000b; z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  #modal-overlay.visible { display: flex; }
+  #modal-box {
+    background: #1a2e1a; border: 2px solid #8b6914; border-radius: 16px;
+    padding: 28px 32px; max-width: min(520px, 92vw);
+    text-align: center; font-size: 0.92rem; line-height: 1.75;
+    box-shadow: 0 8px 40px #000a;
+  }
+  #modal-box h2 { color: #f5d060; margin-bottom: 12px; }
+  #modal-box p  { margin-bottom: 8px; }
+  #modal-box pre {
+    background: #0d2b1a; border-radius: 6px; padding: 10px 14px;
+    margin: 8px 0; font-size: 0.8rem; color: #a8d8a8;
+    text-align: left; white-space: pre-wrap; font-family: monospace;
+  }
+  #modal-box .modal-actions {
+    display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap;
+  }
+  #modal-box input[type="number"] {
+    background: #0d2b1a; border: 1px solid #3a6a4a;
+    color: #f0e8d0; border-radius: 6px;
+    padding: 6px 10px; font-size: 1rem;
+    width: 130px; text-align: center; font-family: inherit; margin: 8px 0;
+  }
+
+  /* ── Break overlay ── */
+  #break-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #000e; z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 16px;
+  }
+  #break-overlay.visible { display: flex; }
+  #break-overlay h2 { color: #f5d060; font-size: 2rem; }
+  #break-overlay p  { max-width: 400px; color: #f0e8d0; line-height: 1.7; }
+  #break-countdown  { font-size: 3.5rem; color: #f5d060; font-weight: bold; }
+
+  /* ── Flash animations ── */
+  @keyframes flash-red {
+    0%,100% { background: radial-gradient(ellipse at center, #206040 0%, #154530 100%); }
+    40%      { background: radial-gradient(ellipse at center, #602020 0%, #3a0f0f 100%); }
+  }
+  @keyframes flash-gold {
+    0%,100% { background: radial-gradient(ellipse at center, #206040 0%, #154530 100%); }
+    40%      { background: radial-gradient(ellipse at center, #604020 0%, #3a2a0a 100%); }
+  }
+  #table.flash-bust { animation: flash-red  0.5s ease; }
+  #table.flash-bj   { animation: flash-gold 0.5s ease; }
+</style>
+</head>
+<body>
+
+<!-- Responsible Gambling Banner -->
+<div id="rg-banner">
+  <span>
+    <span class="rg-warning">&#9888; For Entertainment Only</span>
+    &nbsp;&middot;&nbsp;No Real Money&nbsp;&middot;&nbsp;Must Be 18+ to Gamble
+  </span>
+  <div id="rg-actions">
+    <button class="rg-btn" onclick="showRules()">Rules &amp; Odds</button>
+    <button class="rg-btn" onclick="showLimitSetter()">Loss Limit</button>
+    <button class="rg-btn rg-break" onclick="takeBreak()">&#9749; Take a Break</button>
+  </div>
+</div>
+
+<h1>&#9824; BLACKJACK &#9830;</h1>
+
+<div id="bankroll-bar">
+  <span>Balance:&nbsp;<strong id="balance-display">$1000</strong></span>
+  <span id="session-stats">
+    Session:&nbsp;<span id="session-time">00:00</span>&nbsp;&middot;
+    Hands:&nbsp;<span id="session-hands">0</span>&nbsp;&middot;
+    Net:&nbsp;<span id="session-net" class="net-zer">$0</span>
+  </span>
+</div>
+
+<div id="table">
+
+  <!-- Dealer -->
+  <div>
+    <div class="area-label">Dealer</div>
+    <div class="hand-row">
+      <div class="hand-area" id="dealer-hand"></div>
+      <div class="score-badge" id="dealer-score"></div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div id="message">Place your bet to begin.</div>
+  <div id="split-indicator"></div>
+
+  <hr class="divider">
+
+  <!-- Player -->
+  <div>
+    <div class="area-label">You</div>
+    <div class="hand-row">
+      <div class="hand-area" id="player-hand"></div>
+      <div class="score-badge" id="player-score"></div>
+    </div>
+  </div>
+
+  <!-- Bet strip -->
+  <div id="bet-strip">
+    <button class="chip chip-1"   onclick="addBet(1)"  >$1</button>
+    <button class="chip chip-5"   onclick="addBet(5)"  >$5</button>
+    <button class="chip chip-10"  onclick="addBet(10)" >$10</button>
+    <button class="chip chip-25"  onclick="addBet(25)" >$25</button>
+    <button class="chip chip-100" onclick="addBet(100)">$100</button>
+    <button class="btn btn-clear" id="btn-clear" onclick="clearBet()">Clear</button>
+    <div id="bet-display">Bet:&nbsp;<span id="bet-amount">$0</span></div>
+  </div>
+
+  <!-- Action buttons -->
+  <div id="actions">
+    <button class="btn btn-deal"   id="btn-deal"   onclick="deal()">Deal</button>
+    <button class="btn btn-hit"    id="btn-hit"    onclick="playerHit()"    disabled>Hit</button>
+    <button class="btn btn-stand"  id="btn-stand"  onclick="playerStand()"  disabled>Stand</button>
+    <button class="btn btn-double" id="btn-double" onclick="playerDouble()" disabled>Double</button>
+    <button class="btn btn-split"  id="btn-split"  onclick="playerSplit()"  disabled>Split</button>
+    <button class="btn btn-reset"  id="btn-reset"  onclick="resetGame()" style="display:none">New Game</button>
+  </div>
+
+  <div id="table-limits">
+    Min: $1 &middot; No Max &middot; 6 Decks &middot; Dealer hits soft 17 &middot; Blackjack pays 3:2
+  </div>
+
+</div>
+
+<div id="history"></div>
+
+<!-- Responsible Gambling Footer -->
+<div id="rg-footer">
+  <strong>Responsible Gambling</strong><br>
+  This is a free entertainment simulation — no real money involved.<br>
+  House edge: ~0.5% with optimal play &nbsp;|&nbsp; RTP: ~99.5% &nbsp;|&nbsp; Min bet: $1<br>
+  If gambling is causing problems:&nbsp;
+  <strong>1-800-522-4700</strong> &mdash; National Problem Gambling Helpline (24/7, free &amp; confidential)<br>
+  <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer">begambleaware.org</a>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" onclick="closeModal()">
+  <div id="modal-box" onclick="event.stopPropagation()">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- Break overlay -->
+<div id="break-overlay">
+  <h2>&#9749; Taking a Break</h2>
+  <p>Step away from the screen. The game resumes in:</p>
+  <div id="break-countdown">30</div>
+  <p style="font-size:0.82rem;color:#a8d8a8;">
+    Problem with gambling? Call <strong>1-800-522-4700</strong>
+  </p>
+  <button class="btn btn-deal" id="break-resume-btn" onclick="endBreak()" style="display:none">
+    Resume Game
+  </button>
+</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────────────────
+const SUITS       = Object.freeze(['♠','♥','♦','♣']);
+const RANKS       = Object.freeze(['A','2','3','4','5','6','7','8','9','10','J','Q','K']);
+const RED_SUITS   = new Set(['♥','♦']);
+const FACE_CARDS  = new Set(['J','Q','K']);
+const NUM_DECKS   = 6;
+const RESHUFFLE_AT = 52;         // reshuffle when fewer than this many cards remain
+const STARTING_BALANCE = 1000;
+const MIN_BET  = 1;
+const MAX_BET  = Infinity;
+const MAX_HANDS = 4;             // maximum number of split hands
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let balance     = STARTING_BALANCE;
+let bet         = 0;
+let deck        = [];
+// Each hand: { cards: Card[], stood: bool, busted: bool, bet: number,
+//              fromSplit: bool, splitAces: bool }
+let playerHands = [];
+let activeIdx   = 0;
+let dealerCards = [];
+let inRound     = false;
+
+// Animation state
+let isDealing      = false;   // true during the sequential initial-deal animation
+let animateHints   = {};      // { dealer: firstNewCardIdx, p0: firstNewCardIdx, ... }
+let revealingHole  = false;   // true when dealer hole card is being flipped
+
+// Session tracking
+let sessionStart      = Date.now();
+let sessionHands      = 0;
+let sessionNetPL      = 0;
+let sessionLossLimit  = Infinity;
+let lossLimitHit      = false;
+let thirtyMinWarned   = false;
+let recentResults     = [];
+
+// Timers
+let sessionTimerInterval = null;
+let breakTimerInterval   = null;
+let breakSecondsLeft     = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR HANDLING
+// Wraps any function call; on exception, logs and gracefully recovers.
+// ─────────────────────────────────────────────────────────────────────────────
+function safeCall(label, fn) {
+  try {
+    return fn();
+  } catch (err) {
+    console.error('[Blackjack][' + label + ']', err);
+    try {
+      inRound = false;
+      setMsg('An error occurred — please try again.', 'error');
+      updateButtons();
+    } catch (e2) {
+      console.error('[Blackjack][recovery]', e2);
+    }
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRYPTO RNG
+// Uses Web Crypto API (crypto.getRandomValues) with rejection-sampling
+// Fisher-Yates to guarantee an unbiased shuffle of every possible ordering.
+// Falls back gracefully to Math.random() if the API is unavailable.
+// ─────────────────────────────────────────────────────────────────────────────
+const HAS_CRYPTO = (
+  typeof crypto !== 'undefined' &&
+  typeof crypto.getRandomValues === 'function'
+);
+
+/** Returns an unbiased cryptographically secure integer in [0, n). */
+function secureRandBelow(n) {
+  if (!Number.isInteger(n) || n <= 0) throw new RangeError('n must be a positive integer');
+  if (n === 1) return 0;
+
+  if (HAS_CRYPTO) {
+    // Rejection sampling avoids modulo bias (any value > limit is discarded).
+    const MAX_U32 = 0xFFFFFFFF;
+    const limit   = MAX_U32 - (MAX_U32 % n);
+    const buf     = new Uint32Array(1);
+    let attempts  = 0;
+    do {
+      if (++attempts > 1000) {
+        // Astronomically unlikely; fall back rather than hang.
+        console.warn('[Blackjack] RNG: fallback after 1000 rejection attempts');
+        return Math.floor(Math.random() * n);
+      }
+      crypto.getRandomValues(buf);
+    } while (buf[0] > limit);
+    return buf[0] % n;
+  }
+
+  // Fallback: Math.random() (not cryptographically secure but functionally adequate)
+  console.warn('[Blackjack] crypto.getRandomValues unavailable; using Math.random()');
+  return Math.floor(Math.random() * n);
+}
+
+/** Unbiased Fisher-Yates shuffle — returns a new shuffled array. */
+function secureShuffle(arr) {
+  const d = arr.slice();
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = secureRandBelow(i + 1);
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DECK
+// ─────────────────────────────────────────────────────────────────────────────
+function buildDeck(n) {
+  const d = [];
+  for (let i = 0; i < n; i++)
+    for (const s of SUITS)
+      for (const r of RANKS)
+        d.push(Object.freeze({ rank: r, suit: s }));
+  return d;
+}
+
+function initDeck() {
+  deck = secureShuffle(buildDeck(NUM_DECKS));
+}
+
+function drawCard() {
+  if (deck.length < RESHUFFLE_AT) {
+    console.info('[Blackjack] Reshuffling ' + NUM_DECKS + ' decks (' + deck.length + ' cards left).');
+    initDeck();
+  }
+  const card = deck.pop();
+  if (!card) throw new Error('Deck exhausted after reshuffle — this should never happen.');
+  return card;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HAND EVALUATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Converts a rank string to its base point value. Throws on invalid input. */
+function rankToPoints(rank) {
+  if (rank === 'A')         return 11;   // aces reduced later if needed
+  if (FACE_CARDS.has(rank)) return 10;
+  const n = Number(rank);
+  if (!Number.isInteger(n) || n < 2 || n > 10)
+    throw new RangeError('Invalid rank: ' + JSON.stringify(rank));
+  return n;
+}
+
+/** Computes the best (highest without busting) value for a hand. */
+function handValue(cards) {
+  if (!Array.isArray(cards) || cards.length === 0) return 0;
+  let total = 0;
+  let aces  = 0;
+  for (const c of cards) {
+    if (c.rank === 'A') { total += 11; aces++; }
+    else total += rankToPoints(c.rank);
+  }
+  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  return total;
+}
+
+/**
+ * Returns true if the hand is "soft" — i.e., contains an ace
+ * currently counted as 11. Needed for soft-17 dealer rule.
+ */
+function isSoftHand(cards) {
+  let total = 0, aces = 0;
+  for (const c of cards) {
+    if (c.rank === 'A') { total += 11; aces++; }
+    else total += rankToPoints(c.rank);
+  }
+  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  // If aces > 0 after reduction, at least one ace is still valued at 11.
+  return aces > 0;
+}
+
+/**
+ * True Blackjack: exactly 2 cards, total 21, dealt fresh (not from a split).
+ * A 21 after splitting is just "21", not a blackjack per standard casino rules.
+ */
+function isBlackjack(hand) {
+  return !hand.fromSplit && hand.cards.length === 2 && handValue(hand.cards) === 21;
+}
+
+/**
+ * Returns the comparable split-rank value.
+ * Tens and face cards all equal 10 (standard casino split rule).
+ */
+function splitRankValue(card) {
+  if (FACE_CARDS.has(card.rank)) return 10;
+  if (card.rank === 'A')         return 11;
+  return Number(card.rank);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+function fmtTime(ms) {
+  const s  = Math.floor(ms / 1000);
+  const m  = Math.floor(s / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return String(m).padStart(2, '0') + ':' + ss;
+}
+
+function updateSessionDisplay() {
+  safeCall('updateSessionDisplay', () => {
+    document.getElementById('session-time').textContent  = fmtTime(Date.now() - sessionStart);
+    document.getElementById('session-hands').textContent = sessionHands;
+    const netEl = document.getElementById('session-net');
+    netEl.textContent = (sessionNetPL >= 0 ? '+' : '') + '$' + sessionNetPL;
+    netEl.className   = sessionNetPL > 0 ? 'net-pos' : sessionNetPL < 0 ? 'net-neg' : 'net-zer';
+  });
+}
+
+function startSessionTimer() {
+  clearInterval(sessionTimerInterval);
+  sessionTimerInterval = setInterval(() => safeCall('timer', updateSessionDisplay), 1000);
+}
+
+/**
+ * Responsible gambling checks run after every round.
+ * Shows advisory modals; does not force the player to stop.
+ */
+function checkRGThresholds() {
+  safeCall('checkRGThresholds', () => {
+    // Loss-limit advisory
+    if (isFinite(sessionLossLimit) && !lossLimitHit && sessionNetPL <= -sessionLossLimit) {
+      lossLimitHit = true;
+      showInfoModal(
+        '&#9888; Loss Limit Reached',
+        '<p>You\'ve reached your session loss limit of <strong>$' + sessionLossLimit + '</strong>.</p>' +
+        '<p>Consider taking a break or stopping for today.</p>' +
+        '<p>Remember: this is for entertainment only.</p>' +
+        '<p><strong>Problem Gambling Helpline: 1-800-522-4700</strong></p>'
+      );
+    }
+
+    // 30-minute time check
+    if (!thirtyMinWarned && sessionHands > 0 && (Date.now() - sessionStart) >= 30 * 60 * 1000) {
+      thirtyMinWarned = true;
+      showInfoModal(
+        '&#9749; Time Check',
+        '<p>You\'ve been playing for <strong>30 minutes</strong>.</p>' +
+        '<p>This is a good time to take a break, stretch, and step away.</p>' +
+        '<p>Remember: play for fun, not to recover losses.</p>'
+      );
+    }
+
+    // Out of chips
+    if (balance <= 0) {
+      document.getElementById('btn-reset').style.display = 'inline-block';
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BETTING
+// ─────────────────────────────────────────────────────────────────────────────
+function addBet(amount) {
+  safeCall('addBet', () => {
+    if (inRound) return;
+    if (!Number.isInteger(amount) || amount <= 0) return;     // input validation
+    const room = Math.min(amount, balance - bet);
+    if (room <= 0) return;
+    bet += room;
+    render(); updateButtons();
+  });
+}
+
+function clearBet() {
+  safeCall('clearBet', () => {
+    if (inRound) return;
+    bet = 0;
+    render(); updateButtons();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Animates the initial four-card deal one card at a time, mimicking a real
+ * dealer: player c1 → dealer c1 → player c2 → dealer hole card (face-down).
+ * Buttons are locked during the animation. After the last card lands we
+ * check for naturals and hand control back to the player.
+ */
+function dealSequential() {
+  const DELAY = 180;   // ms between each card
+  isDealing   = true;
+  updateButtons();     // locks all buttons while cards are in flight
+
+  // Clear both hand areas and score badges
+  const dEl = document.getElementById('dealer-hand');
+  const pEl = document.getElementById('player-hand');
+  dEl.innerHTML = '';
+  pEl.innerHTML = '';
+  document.getElementById('dealer-score').textContent = '';
+  document.getElementById('player-score').textContent = '';
+  document.getElementById('split-indicator').textContent = '';
+  document.getElementById('balance-display').textContent = '$' + balance;
+  document.getElementById('bet-amount').textContent      = '$' + bet;
+
+  const dCards = dealerCards;
+  const pCards = playerHands[0].cards;
+
+  function place(container, card, faceDown, direction, delay) {
+    setTimeout(() => {
+      try {
+        const el = faceDown ? makeBack() : makeCard(card);
+        el.classList.add(direction === 'down' ? 'card-deal-down' : 'card-deal-up');
+        container.appendChild(el);
+      } catch (e) { console.error('[deal anim]', e); }
+    }, delay);
+  }
+
+  // Standard deal order: p0, d0, p1, d1(hole)
+  place(pEl, pCards[0], false, 'up',   0);
+  place(dEl, dCards[0], false, 'down', DELAY);
+  place(pEl, pCards[1], false, 'up',   DELAY * 2);
+  place(dEl, dCards[1], true,  'down', DELAY * 3);
+
+  setTimeout(() => {
+    try {
+      // Update visible scores after all cards have landed
+      document.getElementById('dealer-score').textContent = handValue([dCards[0]]);
+      document.getElementById('player-score').textContent = handValue(pCards);
+      isDealing = false;
+
+      const pVal = handValue(pCards);
+      const dVal = handValue(dCards);
+      if (pVal === 21 || dVal === 21) {
+        revealAndFinish();
+        return;
+      }
+      updateButtons();
+
+      // ── Post-deal animations ──────────────────────────────────────────
+      // 1. Score badges bounce in
+      ['dealer-score', 'player-score'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el.textContent) {
+          el.classList.remove('score-pop');
+          void el.offsetWidth;           // restart animation if re-dealing
+          el.classList.add('score-pop');
+        }
+      });
+
+      // 2. Player hand pulses gold — signals "your turn"
+      const phEl = document.getElementById('player-hand');
+      phEl.classList.remove('hand-glow');
+      void phEl.offsetWidth;
+      phEl.classList.add('hand-glow');
+
+      // 3. Action buttons slide up in a staggered cascade
+      document.querySelectorAll('#actions .btn').forEach((btn, i) => {
+        btn.style.animationDelay = (i * 55) + 'ms';
+        btn.classList.remove('btn-appear');
+        void btn.offsetWidth;
+        btn.classList.add('btn-appear');
+      });
+
+    } catch (e) { console.error('[deal anim finish]', e); }
+  }, DELAY * 4 + 60);
+}
+
+function deal() {
+  safeCall('deal', () => {
+    if (inRound) return;
+    if (bet < MIN_BET) { setMsg('Minimum bet is $' + MIN_BET + '.', ''); return; }
+    if (bet > balance) { setMsg('Insufficient balance.', '');            return; }
+
+    balance  -= bet;
+    inRound   = true;
+    activeIdx = 0;
+    setMsg('', '');
+
+    dealerCards = [drawCard(), drawCard()];
+    playerHands = [{
+      cards: [drawCard(), drawCard()],
+      stood: false, busted: false,
+      bet, fromSplit: false, splitAces: false
+    }];
+
+    dealSequential();   // animated deal instead of plain render()
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLAYER ACTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+function playerHit() {
+  safeCall('playerHit', () => {
+    if (!inRound || activeIdx >= playerHands.length) return;
+    const hand = playerHands[activeIdx];
+    if (hand.stood || hand.busted) return;
+
+    hand.cards.push(drawCard());
+    const val = handValue(hand.cards);
+    animateHints = { ['p' + activeIdx]: hand.cards.length - 1 };
+    render();
+
+    if (val > 21) {
+      hand.busted = true;
+      flash('bust');
+      advanceHand();
+    } else if (val === 21) {
+      playerStand();   // auto-stand on 21 — no benefit to drawing
+    } else {
+      updateButtons();
+    }
+  });
+}
+
+function playerStand() {
+  safeCall('playerStand', () => {
+    if (!inRound || activeIdx >= playerHands.length) return;
+    playerHands[activeIdx].stood = true;
+    advanceHand();
+  });
+}
+
+function playerDouble() {
+  safeCall('playerDouble', () => {
+    if (!inRound || activeIdx >= playerHands.length) return;
+    const hand = playerHands[activeIdx];
+    if (hand.cards.length !== 2)   return;
+    if (hand.bet > balance) { setMsg('Insufficient balance to double down.', ''); return; }
+
+    balance  -= hand.bet;
+    hand.bet *= 2;
+    hand.cards.push(drawCard());
+    animateHints = { ['p' + activeIdx]: hand.cards.length - 1 };
+    render();
+
+    if (handValue(hand.cards) > 21) {
+      hand.busted = true;
+      flash('bust');
+    }
+    hand.stood = true;
+    advanceHand();
+  });
+}
+
+function playerSplit() {
+  safeCall('playerSplit', () => {
+    if (!inRound || activeIdx >= playerHands.length) return;
+    const hand = playerHands[activeIdx];
+    if (hand.cards.length !== 2)    return;
+    if (playerHands.length >= MAX_HANDS) { setMsg('Maximum ' + MAX_HANDS + ' hands per round.', ''); return; }
+
+    const [c1, c2] = hand.cards;
+    if (splitRankValue(c1) !== splitRankValue(c2)) return;   // shouldn't happen, button guards it
+    if (hand.bet > balance) { setMsg('Insufficient balance to split.', ''); return; }
+
+    balance -= hand.bet;
+    const splittingAces = (c1.rank === 'A');
+
+    // Each split hand gets one fresh card immediately
+    const h1 = { cards: [c1, drawCard()], stood: false, busted: false,
+                  bet: hand.bet, fromSplit: true, splitAces: splittingAces };
+    const h2 = { cards: [c2, drawCard()], stood: false, busted: false,
+                  bet: hand.bet, fromSplit: true, splitAces: splittingAces };
+
+    // Standard casino rule: split aces receive exactly one card each, then auto-stand.
+    if (splittingAces) { h1.stood = true; h2.stood = true; }
+
+    playerHands.splice(activeIdx, 1, h1, h2);
+    render();
+
+    if (splittingAces) {
+      activeIdx = playerHands.length;   // mark all played; go to dealer
+      revealAndFinish();
+    } else {
+      updateButtons();
+    }
+  });
+}
+
+function advanceHand() {
+  safeCall('advanceHand', () => {
+    activeIdx++;
+    if (activeIdx >= playerHands.length) {
+      revealAndFinish();
+    } else {
+      render(); updateButtons();
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEALER ANIMATION & OUTCOME RESOLUTION
+// Split into three stages so the dealer plays out visually card-by-card.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Stage 1 — entry point called when all player hands are settled.
+ * Pre-draws every card the dealer will need (synchronously, so the deck
+ * state is locked in at this moment), then flips the hole card and hands
+ * off to the animation stage.
+ */
+function revealAndFinish() {
+  safeCall('revealAndFinish', () => {
+    const allBust = playerHands.every(h => h.busted);
+
+    // Draw all needed dealer cards NOW (synchronous) so the deck order is
+    // fixed regardless of how long the animation takes.
+    const extraCards = [];
+    if (!allBust) {
+      let safety = 0;
+      const tmp  = dealerCards.slice();   // temp copy just for lookahead
+      while (
+        (handValue(tmp) < 17 || (handValue(tmp) === 17 && isSoftHand(tmp))) &&
+        safety++ < 20
+      ) {
+        const c = drawCard();
+        extraCards.push(c);
+        tmp.push(c);
+      }
+    }
+
+    // Flip the hole card with animation, then hand off to Stage 2.
+    setMsg('Dealer\u2019s turn\u2026', '');
+    revealingHole = true;
+    render();
+
+    runDealerAnimation(extraCards);
+  });
+}
+
+/**
+ * Stage 2 — shows each extra dealer card sliding in one at a time.
+ * Calls resolveOutcome() once the last card has landed.
+ */
+function runDealerAnimation(extraCards) {
+  const FLIP_WAIT  = 480;   // ms: wait for the hole-flip animation to finish
+  const CARD_DELAY = 600;   // ms: gap between each additional dealer card
+
+  if (extraCards.length === 0) {
+    // Dealer already stands — skip straight to outcome after the flip settles
+    setTimeout(() => safeCall('dealerAnim0', resolveOutcome), FLIP_WAIT);
+    return;
+  }
+
+  extraCards.forEach((card, i) => {
+    const t = FLIP_WAIT + (i + 1) * CARD_DELAY;
+    setTimeout(() => {
+      safeCall('dealerAnim' + i, () => {
+        dealerCards.push(card);
+        animateHints = { dealer: dealerCards.length - 1 };
+        render();   // new card slides in via card-deal-down
+
+        // After the last card lands, wait one beat then show outcome
+        if (i === extraCards.length - 1) {
+          setTimeout(() => safeCall('dealerAnimDone', resolveOutcome), CARD_DELAY);
+        }
+      });
+    }, t);
+  });
+}
+
+/**
+ * Stage 3 — calculates each hand's outcome, updates balance / session stats,
+ * and presents the final result message.
+ */
+function resolveOutcome() {
+  const dVal = handValue(dealerCards);
+  const dBJ  = (dealerCards.length === 2 && dVal === 21);
+
+  let msgs          = [];
+  let totalReturned = 0;
+  const totalWagered = playerHands.reduce((s, h) => s + h.bet, 0);
+
+  for (const hand of playerHands) {
+    const pVal = handValue(hand.cards);
+    const pBJ  = isBlackjack(hand);
+
+    let outcome;
+    if (hand.busted)        outcome = 'bust';
+    else if (pBJ && dBJ)    outcome = 'push';
+    else if (pBJ)           outcome = 'blackjack';
+    else if (dBJ)           outcome = 'lose';
+    else if (dVal > 21)     outcome = 'win';
+    else if (pVal > dVal)   outcome = 'win';
+    else if (pVal === dVal) outcome = 'push';
+    else                    outcome = 'lose';
+
+    switch (outcome) {
+      case 'blackjack': {
+        const bonus = Math.floor(hand.bet * 1.5);   // 3:2, rounded down
+        totalReturned += hand.bet + bonus;
+        msgs.push('Blackjack! +$' + bonus);
+        break;
+      }
+      case 'win':
+        totalReturned += hand.bet * 2;
+        msgs.push('Win! +$' + hand.bet);
+        break;
+      case 'push':
+        totalReturned += hand.bet;
+        msgs.push('Push.');
+        break;
+      case 'bust':
+        msgs.push('Bust \u2014 \u2212$' + hand.bet);
+        break;
+      case 'lose':
+        msgs.push('Dealer wins \u2014 \u2212$' + hand.bet);
+        break;
+    }
+  }
+
+  // Financials
+  balance      += totalReturned;
+  const delta   = totalReturned - totalWagered;
+  sessionNetPL += delta;
+  sessionHands++;
+
+  // Result display
+  const combined = msgs.join(' \u00b7 ');
+  const cls      = delta > 0 ? 'win' : delta === 0 ? 'push' : 'lose';
+  setMsg(combined, cls);
+
+  if (delta > 0)  flash('bj');
+  else if (delta < 0 && !msgs.every(m => m.startsWith('Push'))) flash('bust');
+
+  recentResults.unshift(combined);
+  if (recentResults.length > 8) recentResults.pop();
+  document.getElementById('history').textContent =
+    recentResults.length ? 'Recent: ' + recentResults.slice(0, 3).join(' \u00b7 ') : '';
+
+  // End the round
+  inRound   = false;
+  activeIdx = 0;
+  bet       = 0;
+
+  render();
+  updateSessionDisplay();
+  updateButtons();
+  checkRGThresholds();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER
+// All DOM mutations use textContent, not innerHTML, for user-facing values.
+// Card elements are built entirely with createElement/textContent.
+// ─────────────────────────────────────────────────────────────────────────────
+function render() {
+  safeCall('render', () => {
+    document.getElementById('balance-display').textContent = '$' + balance;
+    document.getElementById('bet-amount').textContent      = '$' + bet;
+
+    // ── Dealer ──
+    const dEl          = document.getElementById('dealer-hand');
+    dEl.innerHTML      = '';   // safe: no user data, cleared then rebuilt with DOM
+    const roundActive  = inRound && activeIdx < playerHands.length;
+    const holeFlip     = revealingHole;   // capture & reset before building
+    revealingHole      = false;
+    const dHint        = animateHints.dealer;
+
+    dealerCards.forEach((c, i) => {
+      let el;
+      if (i === 1 && roundActive) {
+        el = makeBack();
+      } else {
+        el = makeCard(c);
+        // Flip animation when the hole card is revealed
+        if (i === 1 && holeFlip) el.classList.add('card-flip');
+      }
+      // Slide-in for newly drawn dealer cards (e.g. dealer hitting)
+      if (dHint != null && i >= dHint) el.classList.add('card-deal-down');
+      dEl.appendChild(el);
+    });
+
+    const dScore = document.getElementById('dealer-score');
+    if (dealerCards.length === 0) {
+      dScore.textContent = '';
+    } else if (roundActive) {
+      dScore.textContent = handValue([dealerCards[0]]);   // show only visible card total
+    } else {
+      dScore.textContent = handValue(dealerCards);
+    }
+
+    // ── Player ──
+    const pEl    = document.getElementById('player-hand');
+    const pScore = document.getElementById('player-score');
+    const splitEl = document.getElementById('split-indicator');
+    pEl.innerHTML = '';
+
+    if (playerHands.length === 0) {
+      pScore.textContent = '';
+      splitEl.textContent = '';
+      return;
+    }
+
+    if (playerHands.length === 1) {
+      const ph0 = animateHints.p0;
+      playerHands[0].cards.forEach((c, i) => {
+        const el = makeCard(c);
+        if (ph0 != null && i >= ph0) el.classList.add('card-deal-up');
+        pEl.appendChild(el);
+      });
+      pScore.textContent  = handValue(playerHands[0].cards);
+      splitEl.textContent = '';
+    } else {
+      splitEl.textContent = 'Hand ' + (Math.min(activeIdx, playerHands.length - 1) + 1) +
+                            ' of ' + playerHands.length;
+      playerHands.forEach((hand, idx) => {
+        const wrapper       = document.createElement('div');
+        wrapper.style.cssText =
+          'display:flex;flex-direction:column;align-items:center;gap:4px;' +
+          'padding:4px 8px;border-radius:8px;border:2px solid ' +
+          (idx === activeIdx && inRound ? '#f5d060' : 'transparent') + ';';
+
+        const pHint = animateHints['p' + idx];
+        hand.cards.forEach((c, i) => {
+          const el = makeCard(c);
+          if (pHint != null && i >= pHint) el.classList.add('card-deal-up');
+          wrapper.appendChild(el);
+        });
+
+        const badge       = document.createElement('div');
+        badge.className   = 'score-badge';
+        badge.style.marginLeft = '0';
+        badge.textContent = handValue(hand.cards);
+        wrapper.appendChild(badge);
+        pEl.appendChild(wrapper);
+      });
+      pScore.textContent = '';
+    }
+
+    animateHints = {};   // reset after each render
+  });
+}
+
+/** Builds a card DOM element using only textContent (no innerHTML). */
+function makeCard({ rank, suit }) {
+  const el  = document.createElement('div');
+  el.className = 'card ' + (RED_SUITS.has(suit) ? 'red' : 'black');
+
+  const label = rank + suit;
+
+  const top = document.createElement('div');
+  top.className   = 'card-top';
+  top.textContent = label;
+
+  const mid = document.createElement('div');
+  mid.className   = 'card-suit';
+  mid.textContent = suit;
+
+  const bot = document.createElement('div');
+  bot.className   = 'card-bot';
+  bot.textContent = label;
+
+  el.append(top, mid, bot);
+  return el;
+}
+
+function makeBack() {
+  const el  = document.createElement('div');
+  el.className = 'card back';
+  return el;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUTTON STATE
+// ─────────────────────────────────────────────────────────────────────────────
+function updateButtons() {
+  safeCall('updateButtons', () => {
+    const dealing = inRound && activeIdx < playerHands.length;
+    const hand    = dealing ? playerHands[activeIdx] : null;
+
+    // Lock everything while the initial deal animation is running
+    if (isDealing) {
+      ['btn-deal','btn-hit','btn-stand','btn-double','btn-split','btn-clear']
+        .forEach(id => { document.getElementById(id).disabled = true; });
+      document.querySelectorAll('.chip').forEach(c => { c.disabled = true; });
+      return;
+    }
+
+    const canDeal   = !inRound && balance > 0;
+    const canHit    = dealing && !hand.stood && !hand.busted;
+    const canStand  = dealing && !hand.stood && !hand.busted;
+    const canDouble = dealing && hand.cards.length === 2 && hand.bet <= balance;
+    const canSplit  = dealing &&
+                      hand.cards.length === 2 &&
+                      splitRankValue(hand.cards[0]) === splitRankValue(hand.cards[1]) &&
+                      hand.bet <= balance &&
+                      playerHands.length < MAX_HANDS;
+
+    document.getElementById('btn-deal').disabled   = !canDeal;
+    document.getElementById('btn-hit').disabled    = !canHit;
+    document.getElementById('btn-stand').disabled  = !canStand;
+    document.getElementById('btn-double').disabled = !canDouble;
+    document.getElementById('btn-split').disabled  = !canSplit;
+
+    document.querySelectorAll('.chip').forEach(c => { c.disabled = inRound; });
+    document.getElementById('btn-clear').disabled = inRound;
+
+    if (!inRound) {
+      if (balance <= 0) {
+        document.getElementById('btn-reset').style.display = 'inline-block';
+        setMsg('Out of chips! Start a new game.', 'lose');
+      } else if (bet === 0) {
+        setMsg('Place your bet to begin.', '');
+      } else {
+        setMsg('Bet: $' + bet + ' \u2014 press Deal!', '');
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function setMsg(text, cls) {
+  const el = document.getElementById('message');
+  el.textContent = String(text);   // textContent: never injects HTML
+  el.className   = cls || '';
+}
+
+function flash(type) {
+  safeCall('flash', () => {
+    const t = document.getElementById('table');
+    t.classList.remove('flash-bust', 'flash-bj');
+    void t.offsetWidth;   // force reflow to restart animation
+    t.classList.add(type === 'bust' ? 'flash-bust' : 'flash-bj');
+    setTimeout(() => {
+      try { t.classList.remove('flash-bust', 'flash-bj'); } catch (_) {}
+    }, 600);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL SYSTEM
+// showInfoModal builds content with DOM methods — title via textContent,
+// body via innerHTML only from our own hard-coded strings (never user input).
+// ─────────────────────────────────────────────────────────────────────────────
+function openModalBox() {
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('visible');
+}
+
+function showInfoModal(title, bodyHTML) {
+  const box = document.getElementById('modal-content');
+  box.innerHTML = '';
+
+  const h2 = document.createElement('h2');
+  h2.innerHTML = title;   // title may contain entity refs like &#9888; — trusted string
+  box.appendChild(h2);
+
+  const body = document.createElement('div');
+  body.innerHTML = bodyHTML;   // trusted: always a literal from our code, never user data
+  box.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'btn btn-close';
+  closeBtn.textContent = 'Close';
+  closeBtn.onclick = closeModal;
+  actions.appendChild(closeBtn);
+  box.appendChild(actions);
+
+  openModalBox();
+}
+
+// ─── Rules panel ───────────────────────────────────────────────────────────
+function showRules() {
+  const rulesText =
+    'Decks:        6 (reshuffled at < 52 cards)\n' +
+    'Blackjack:    Pays 3:2 (natural only; not on split)\n' +
+    'Dealer:       Hits on hard < 17 and soft 17\n' +
+    'Double Down:  First 2 cards only\n' +
+    'Split:        Up to 4 hands; matched rank value\n' +
+    'Split Aces:   One card each; no re-split; no BJ\n' +
+    'Insurance:    Not offered\n' +
+    'Surrender:    Not offered';
+
+  const rgInfo =
+    'RNG: crypto.getRandomValues() with unbiased rejection-\n' +
+    'sampling Fisher-Yates shuffle (fallback: Math.random).\n\n' +
+    'House edge: ~0.5% with optimal basic strategy.\n' +
+    'Return-to-Player (RTP): ~99.5%.\n' +
+    'Bet limits: $1 minimum, no maximum.';
+
+  showInfoModal(
+    '&#9824; Rules &amp; Game Information',
+    '<pre>' + rulesText + '</pre>' +
+    '<pre>' + rgInfo + '</pre>'
+  );
+}
+
+// ─── Loss limit setter ─────────────────────────────────────────────────────
+function showLimitSetter() {
+  const box = document.getElementById('modal-content');
+  box.innerHTML = '';
+
+  const h2 = document.createElement('h2');
+  h2.textContent = 'Set Session Loss Limit';
+  box.appendChild(h2);
+
+  const p = document.createElement('p');
+  p.textContent = 'You\'ll receive an advisory when your session losses reach this amount. Helps you stay in control.';
+  box.appendChild(p);
+
+  const input = document.createElement('input');
+  input.type        = 'number';
+  input.min         = '1';
+  input.max         = '1000';
+  input.placeholder = '$0 = no limit';
+  if (isFinite(sessionLossLimit)) input.value = String(sessionLossLimit);
+  box.appendChild(input);
+
+  const actions = document.createElement('div');
+  actions.className = 'modal-actions';
+
+  const setBtn = document.createElement('button');
+  setBtn.className = 'btn btn-hit';
+  setBtn.textContent = 'Set Limit';
+  setBtn.onclick = () => safeCall('setLimit', () => {
+    const raw = parseInt(input.value, 10);
+    if (!isFinite(raw) || raw <= 0) {
+      sessionLossLimit = Infinity;
+      lossLimitHit     = false;
+    } else if (raw < 1 || raw > 1000) {
+      setMsg('Limit must be between $1 and $1000.', '');
+      return;
+    } else {
+      sessionLossLimit = raw;
+      lossLimitHit     = false;
+    }
+    closeModal();
+    if (isFinite(sessionLossLimit))
+      setMsg('Loss limit set: $' + sessionLossLimit + '.', '');
+    else
+      setMsg('Loss limit cleared.', '');
+  });
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-clear';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = closeModal;
+
+  actions.append(setBtn, cancelBtn);
+  box.appendChild(actions);
+  openModalBox();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BREAK SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+function takeBreak() {
+  safeCall('takeBreak', () => {
+    if (inRound) { setMsg('Finish the current hand before taking a break.', ''); return; }
+
+    breakSecondsLeft = 30;
+    const cdEl  = document.getElementById('break-countdown');
+    const btnEl = document.getElementById('break-resume-btn');
+    cdEl.textContent  = breakSecondsLeft;
+    btnEl.style.display = 'none';
+    document.getElementById('break-overlay').classList.add('visible');
+
+    clearInterval(breakTimerInterval);
+    breakTimerInterval = setInterval(() => {
+      try {
+        breakSecondsLeft--;
+        cdEl.textContent = breakSecondsLeft;
+        if (breakSecondsLeft <= 0) {
+          clearInterval(breakTimerInterval);
+          cdEl.textContent    = '&#10003;';
+          btnEl.style.display = 'inline-block';
+        }
+      } catch (e) {
+        clearInterval(breakTimerInterval);
+      }
+    }, 1000);
+  });
+}
+
+function endBreak() {
+  clearInterval(breakTimerInterval);
+  document.getElementById('break-overlay').classList.remove('visible');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESET GAME
+// ─────────────────────────────────────────────────────────────────────────────
+function resetGame() {
+  safeCall('resetGame', () => {
+    if (inRound) { setMsg('Finish the current hand first.', ''); return; }
+
+    balance           = STARTING_BALANCE;
+    bet               = 0;
+    playerHands       = [];
+    dealerCards       = [];
+    inRound           = false;
+    activeIdx         = 0;
+    recentResults     = [];
+    sessionNetPL      = 0;
+    sessionHands      = 0;
+    sessionStart      = Date.now();
+    lossLimitHit      = false;
+    thirtyMinWarned   = false;
+    sessionLossLimit  = Infinity;
+
+    initDeck();
+
+    document.getElementById('btn-reset').style.display = 'none';
+    document.getElementById('history').textContent     = '';
+
+    render();
+    updateButtons();
+    updateSessionDisplay();
+    setMsg('New game started. Good luck!', '');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+try {
+  initDeck();
+  startSessionTimer();
+  render();
+  updateButtons();
+  updateSessionDisplay();
+
+  if (!HAS_CRYPTO) {
+    // Surface a visible notice if the preferred RNG is unavailable
+    const notice = document.createElement('p');
+    notice.style.cssText = 'font-size:0.68rem;color:#ff9966;text-align:center;margin-top:4px;';
+    notice.textContent =
+      '\u26a0 Your browser does not support the Web Crypto API. ' +
+      'Standard (non-cryptographic) randomization is in use.';
+    document.getElementById('table').appendChild(notice);
+  }
+} catch (initErr) {
+  console.error('[Blackjack][init]', initErr);
+  document.getElementById('message').textContent =
+    'Failed to initialize. Please reload the page.';
+}
+</script>
+</body>
+</html>
