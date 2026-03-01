@@ -10,9 +10,113 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  /* ══════════════════════════════════════════════════════════
+     THEME ENGINE — CSS custom properties drive all visuals.
+     Body class controls which theme is active.
+  ══════════════════════════════════════════════════════════ */
+  :root {
+    /* Classic (default) */
+    --bg:          radial-gradient(ellipse at center, #1a4a2e 0%, #0d2b1a 100%);
+    --felt:        radial-gradient(ellipse at center, #206040 0%, #154530 100%);
+    --felt-border: #8b6914;
+    --accent:      #f5d060;
+    --suit-red:    #c0222a;
+    --suit-dark:   #111111;
+    --back:        repeating-linear-gradient(135deg, #1a3a7a, #1a3a7a 4px, #2255aa 4px, #2255aa 8px);
+    --back-border: #aaaaaa;
+    --label:       #a8d8a8;
+    --rule-line:   #3a6a4a;
+    --glow:        #f5d06055;
+  }
+  /* ── Cosmic: deep-space indigo ── */
+  body.theme-cosmic {
+    --bg:          radial-gradient(ellipse at center, #0d0a2e 0%, #050318 100%);
+    --felt:        radial-gradient(ellipse at center, #1a1050 0%, #0a0830 100%);
+    --felt-border: #7030d0;
+    --accent:      #bb88ff;
+    --suit-red:    #ff44cc;
+    --suit-dark:   #00e8ff;
+    --back:        radial-gradient(ellipse at 35% 30%, #3a006a 0%, #0a0030 55%, #150050 100%);
+    --back-border: #7030d0;
+    --label:       #9988ff;
+    --rule-line:   #2a1a5a;
+    --glow:        #bb88ff55;
+  }
+  /* ── Royal Gold: deep burgundy + gold ── */
+  body.theme-royal {
+    --bg:          radial-gradient(ellipse at center, #2d0a3d 0%, #170520 100%);
+    --felt:        radial-gradient(ellipse at center, #4a1060 0%, #2d0844 100%);
+    --felt-border: #d4af37;
+    --accent:      #d4af37;
+    --suit-red:    #d4af37;
+    --suit-dark:   #7a3a9a;
+    --back:        repeating-linear-gradient(45deg, #3d0055, #3d0055 4px, #5a0082 4px, #5a0082 8px);
+    --back-border: #d4af37;
+    --label:       #d0a0f0;
+    --rule-line:   #4a1060;
+    --glow:        #d4af3755;
+  }
+  /* ── Forest: earth tones ── */
+  body.theme-forest {
+    --bg:          radial-gradient(ellipse at center, #1e1200 0%, #100800 100%);
+    --felt:        radial-gradient(ellipse at center, #3a2808 0%, #221600 100%);
+    --felt-border: #8b6010;
+    --accent:      #e8a030;
+    --suit-red:    #c07020;
+    --suit-dark:   #2a5018;
+    --back:        repeating-linear-gradient(120deg, #2d4a1a, #2d4a1a 5px, #3d6228 5px, #3d6228 10px);
+    --back-border: #8b6010;
+    --label:       #c8a060;
+    --rule-line:   #3a2808;
+    --glow:        #e8a03055;
+  }
+  /* ── Neon Retro: cyberpunk ── */
+  body.theme-neon {
+    --bg:          radial-gradient(ellipse at center, #08001a 0%, #040010 100%);
+    --felt:        radial-gradient(ellipse at center, #0e0028 0%, #08001a 100%);
+    --felt-border: #ff0099;
+    --accent:      #00ffcc;
+    --suit-red:    #ff0099;
+    --suit-dark:   #00ccff;
+    --back:        repeating-linear-gradient(0deg, #080018, #080018 6px, #110028 6px, #110028 12px);
+    --back-border: #ff0099;
+    --label:       #00ffcc;
+    --rule-line:   #1a0040;
+    --glow:        #00ffcc55;
+  }
+
+  /* ── Deck Picker ── */
+  #deck-picker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .deck-label {
+    font-size: 0.75rem;
+    color: var(--label);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .deck-btn {
+    padding: 3px 13px;
+    border-radius: 20px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .deck-btn:hover { background: var(--glow); }
+  .deck-btn.active { background: var(--accent); color: #111; font-weight: bold; }
+
   body {
     font-family: 'Georgia', serif;
-    background: radial-gradient(ellipse at center, #1a4a2e 0%, #0d2b1a 100%);
+    background: var(--bg);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -58,7 +162,7 @@
     margin: 10px 0 6px;
     font-size: 2.2rem;
     letter-spacing: 4px;
-    color: #f5d060;
+    color: var(--accent);
     text-shadow: 0 2px 8px #000a;
   }
 
@@ -72,8 +176,8 @@
     flex-wrap: wrap;
     justify-content: center;
   }
-  #balance-display { font-size: 1.2rem; font-weight: bold; color: #f5d060; }
-  #session-stats { font-size: 0.78rem; color: #a8d8a8; }
+  #balance-display { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+  #session-stats { font-size: 0.78rem; color: var(--label); }
   .net-pos { color: #7dff7d; }
   .net-neg { color: #ff7d7d; }
   .net-zer { color: #f0e8d0; }
@@ -81,9 +185,9 @@
   /* ── Table ── */
   #table {
     width: min(700px, 98vw);
-    background: radial-gradient(ellipse at center, #206040 0%, #154530 100%);
+    background: var(--felt);
     border-radius: 24px;
-    border: 4px solid #8b6914;
+    border: 4px solid var(--felt-border);
     box-shadow: 0 8px 40px #0008, inset 0 0 40px #0003;
     padding: 20px 24px 24px;
     display: flex;
@@ -95,7 +199,7 @@
     font-size: 0.75rem;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #a8d8a8;
+    color: var(--label);
     margin-bottom: 4px;
   }
   .hand-area {
@@ -112,7 +216,7 @@
     border-radius: 8px;
     padding: 2px 10px;
     margin-left: 4px;
-    color: #f5d060;
+    color: var(--accent);
     min-width: 36px;
     text-align: center;
   }
@@ -136,13 +240,11 @@
     flex-shrink: 0;
   }
   .card:hover { transform: translateY(-4px); }
-  .card.red   { color: #c0222a; }
-  .card.black { color: #111; }
+  .card.red   { color: var(--suit-red); }
+  .card.black { color: var(--suit-dark); }
   .card.back {
-    background: repeating-linear-gradient(
-      135deg, #1a3a7a, #1a3a7a 4px, #2255aa 4px, #2255aa 8px
-    );
-    border-color: #aaa;
+    background: var(--back);
+    border-color: var(--back-border);
   }
   .card-top { font-size: 0.72rem; }
   .card-suit { font-size: 1.4rem; text-align: center; line-height: 1; }
@@ -168,6 +270,16 @@
   .card-deal-up   { animation: deal-from-bottom 0.28s cubic-bezier(0.15,0.8,0.3,1) both; }
   .card-flip      { animation: hole-flip 0.38s ease-in-out both; }
 
+  /* ── Particle canvas ── */
+  #particle-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+  }
+
   /* ── Post-deal "your turn" animations ── */
   @keyframes score-pop {
     0%   { opacity: 0; transform: scale(0.2); }
@@ -180,14 +292,14 @@
   }
   @keyframes hand-glow {
     0%, 100% { box-shadow: none; }
-    45%      { box-shadow: 0 0 32px 8px #f5d06066; }
+    45%      { box-shadow: 0 0 32px 8px var(--glow); }
   }
   /* backwards fill: element hides during stagger delay, returns to CSS state after */
   .score-pop  { animation: score-pop  0.4s cubic-bezier(0.2,0.8,0.3,1.5) both; }
   .btn-appear { animation: btn-appear 0.22s ease-out backwards; }
   .hand-glow  { animation: hand-glow  1s ease-in-out; }
 
-  .divider { border: none; border-top: 1px solid #3a6a4a; }
+  .divider { border: none; border-top: 1px solid var(--rule-line); }
 
   /* ── Bet strip ── */
   #bet-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -214,7 +326,7 @@
     font-size: 1.05rem; margin-left: auto;
     background: #0005; border-radius: 8px; padding: 4px 14px;
   }
-  #bet-display span { color: #f5d060; font-weight: bold; }
+  #bet-display span { color: var(--accent); font-weight: bold; }
 
   /* ── Action buttons ── */
   #actions { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -348,6 +460,16 @@
 
 <h1>&#9824; BLACKJACK &#9830;</h1>
 
+<!-- Deck theme picker -->
+<div id="deck-picker">
+  <span class="deck-label">Deck:</span>
+  <button class="deck-btn active" data-theme="classic" onclick="setTheme('classic')">&#127183; Classic</button>
+  <button class="deck-btn" data-theme="cosmic"  onclick="setTheme('cosmic')" >&#10024; Cosmic</button>
+  <button class="deck-btn" data-theme="royal"   onclick="setTheme('royal')"  >&#128081; Royal</button>
+  <button class="deck-btn" data-theme="forest"  onclick="setTheme('forest')" >&#127807; Forest</button>
+  <button class="deck-btn" data-theme="neon"    onclick="setTheme('neon')"   >&#9889; Neon</button>
+</div>
+
 <div id="bankroll-bar">
   <span>Balance:&nbsp;<strong id="balance-display">$1000</strong></span>
   <span id="session-stats">
@@ -432,6 +554,9 @@
   </div>
 </div>
 
+<!-- Particle canvas — win celebration effect -->
+<canvas id="particle-canvas"></canvas>
+
 <!-- Break overlay -->
 <div id="break-overlay">
   <h2>&#9749; Taking a Break</h2>
@@ -447,6 +572,25 @@
 
 <script>
 'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME SYSTEM
+// Swaps a body class to trigger CSS custom-property overrides.
+// ─────────────────────────────────────────────────────────────────────────────
+const THEMES = Object.freeze(['classic', 'cosmic', 'royal', 'forest', 'neon']);
+let currentTheme = 'classic';
+
+function setTheme(name) {
+  if (!THEMES.includes(name)) return;
+  // Remove all theme classes then apply the chosen one
+  THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+  if (name !== 'classic') document.body.classList.add('theme-' + name);
+  currentTheme = name;
+  // Update active button state
+  document.querySelectorAll('.deck-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === name);
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -1076,8 +1220,12 @@ function resolveOutcome() {
   const cls      = delta > 0 ? 'win' : delta === 0 ? 'push' : 'lose';
   setMsg(combined, cls);
 
-  if (delta > 0)  flash('bj');
-  else if (delta < 0 && !msgs.every(m => m.startsWith('Push'))) flash('bust');
+  if (delta > 0) {
+    flash('bj');
+    launchWinParticles(msgs.some(m => m.startsWith('Blackjack')));
+  } else if (delta < 0 && !msgs.every(m => m.startsWith('Push'))) {
+    flash('bust');
+  }
 
   recentResults.unshift(combined);
   if (recentResults.length > 8) recentResults.pop();
@@ -1462,6 +1610,7 @@ function resetGame() {
     sessionLossLimit  = Infinity;
 
     initDeck();
+    clearParticles();
 
     document.getElementById('btn-reset').style.display = 'none';
     document.getElementById('history').textContent     = '';
@@ -1474,10 +1623,111 @@ function resetGame() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PARTICLE SYSTEM — win celebration confetti burst
+// ─────────────────────────────────────────────────────────────────────────────
+let pCanvas, pCtx, pParticles = [], pAnimId = null;
+
+function initParticles() {
+  pCanvas = document.getElementById('particle-canvas');
+  pCtx    = pCanvas.getContext('2d');
+  sizePCanvas();
+  window.addEventListener('resize', sizePCanvas, { passive: true });
+}
+
+function sizePCanvas() {
+  pCanvas.width  = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+}
+
+/**
+ * Launches a confetti burst from the centre of the viewport.
+ * @param {boolean} isBJ  — true uses a larger gold burst for blackjack
+ */
+function launchWinParticles(isBJ) {
+  const count  = isBJ ? 160 : 90;
+  const colors = isBJ
+    ? ['#f5d060','#ffd700','#ffb300','#fff','#ffe066','#ff9900','#ffcc44']
+    : ['#7dff7d','#f5d060','#fff','#44dd44','#aaffaa','#ffd700','#bbffbb'];
+
+  const cx = window.innerWidth  / 2;
+  const cy = window.innerHeight / 2;
+
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 4 + Math.random() * (isBJ ? 13 : 9);
+    pParticles.push({
+      x:    cx + (Math.random() - 0.5) * 100,
+      y:    cy + (Math.random() - 0.5) * 50,
+      vx:   Math.cos(angle) * speed,
+      vy:   Math.sin(angle) * speed - (3 + Math.random() * 5),  // upward bias
+      col:  colors[Math.floor(Math.random() * colors.length)],
+      w:    5  + Math.random() * 8,
+      h:    3  + Math.random() * 4,
+      rot:  Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.26,
+      life: 1.0,
+      dec:  0.009 + Math.random() * 0.012,
+      circ: Math.random() < 0.22,
+    });
+  }
+
+  if (!pAnimId) tickParticles();
+}
+
+function tickParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  let alive = false;
+
+  for (const p of pParticles) {
+    if (p.life <= 0) continue;
+    alive = true;
+
+    p.vy  += 0.22;    // gravity
+    p.vx  *= 0.993;   // horizontal drag
+    p.x   += p.vx;
+    p.y   += p.vy;
+    p.rot += p.rotV;
+    p.life -= p.dec;
+
+    pCtx.save();
+    pCtx.globalAlpha = Math.max(0, p.life);
+    pCtx.fillStyle   = p.col;
+    pCtx.translate(p.x, p.y);
+    pCtx.rotate(p.rot);
+
+    if (p.circ) {
+      pCtx.beginPath();
+      pCtx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+      pCtx.fill();
+    } else {
+      pCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    }
+
+    pCtx.restore();
+  }
+
+  pParticles = pParticles.filter(p => p.life > 0);
+
+  if (alive) {
+    pAnimId = requestAnimationFrame(tickParticles);
+  } else {
+    pAnimId = null;
+    pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  }
+}
+
+function clearParticles() {
+  pParticles = [];
+  if (pAnimId) { cancelAnimationFrame(pAnimId); pAnimId = null; }
+  if (pCtx)    pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
 try {
   initDeck();
+  initParticles();
   startSessionTimer();
   render();
   updateButtons();

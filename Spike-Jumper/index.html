@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spike Jumper</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="mainMenu">
+      <h1>SPIKE JUMPER</h1>
+      <p class="tagline">Jump. Survive. Repeat.</p>
+      <button id="playBtn">Play</button>
+      <button id="skinsBtn">Skins</button>
+    </div>
+
+    <div id="gameOver" class="hidden">
+      <h2>YOU DIED</h2>
+      <div id="finalStats"></div>
+      <button id="retryBtn">Retry</button>
+      <button id="menuBtn">Menu</button>
+    </div>
+
+    <div id="hud" class="hidden">
+      <span id="timer">0.0s</span>
+      <span id="combo"></span>
+    </div>
+
+    <div id="bossBar" class="hidden">
+      <span id="bossName"></span>
+      <div id="bossBarTrack" class="bar-track">
+        <div id="bossBarFill"></div>
+      </div>
+    </div>
+
+    <div id="skinSelector" class="hidden">
+      <h2>Choose Your Skin</h2>
+      <div id="skinGrid"></div>
+      <button id="closeSkins">Close</button>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>

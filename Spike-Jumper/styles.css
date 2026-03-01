@@ -1,0 +1,554 @@
+/* ============================================================
+   SPIKE JUMPER — styles.css
+   Geometry Dash-style auto-runner platformer
+   ============================================================ */
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #0a0a1a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Utility ── */
+.hidden {
+  display: none !important;
+}
+
+/* ── Canvas ── */
+#gameCanvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes flicker {
+  0%,  19%,  21%,  23%,  25%,  54%,  56%,  100% {
+    opacity: 1;
+    text-shadow:
+      0 0 8px #ff3333,
+      0 0 20px #ff3333,
+      0 0 40px #ff6600,
+      0 0 80px #ff3300;
+  }
+  20%,  22%,  24%,  55% {
+    opacity: 0.6;
+    text-shadow: none;
+  }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@keyframes comboGrow {
+  0%   { transform: scale(1);    opacity: 1; }
+  30%  { transform: scale(1.35); opacity: 1; }
+  60%  { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes buttonGlow {
+  0%   { box-shadow: 0 0 8px #8b00ff66,  0 0 20px #00ffff33; }
+  50%  { box-shadow: 0 0 18px #8b00ffaa, 0 0 40px #00ffff66; }
+  100% { box-shadow: 0 0 8px #8b00ff66,  0 0 20px #00ffff33; }
+}
+
+/* ============================================================
+   OVERLAYS — shared base
+   ============================================================ */
+#mainMenu,
+#gameOver,
+#skinSelector {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(5, 5, 20, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  animation: fadeIn 0.35s ease forwards;
+}
+
+/* JS toggles display to flex via .active or direct style;
+   but when display is set to flex it should be centred */
+#mainMenu.active,
+#gameOver.active,
+#skinSelector.active {
+  display: flex;
+}
+
+/* ============================================================
+   MAIN MENU
+   ============================================================ */
+#mainMenu {
+  gap: 18px;
+  text-align: center;
+  padding: 24px;
+}
+
+#mainMenu h1 {
+  font-size: clamp(2.6rem, 8vw, 5.5rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow:
+    0 0 10px #8b00ff,
+    0 0 25px #8b00ff,
+    0 0 55px #6600cc,
+    0 0 90px #4400aa;
+  line-height: 1.1;
+}
+
+#mainMenu .tagline {
+  font-size: clamp(0.85rem, 2.5vw, 1.2rem);
+  color: #00ffff;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px #00ffffaa;
+  margin-bottom: 12px;
+}
+
+/* ============================================================
+   BUTTONS — shared style
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+  padding: 14px 36px;
+  font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: linear-gradient(135deg, #8b00ff 0%, #00ccdd 100%);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+  box-shadow:
+    0 0 10px #8b00ff66,
+    0 0 22px #00ffff33,
+    0 4px 16px rgba(0,0,0,0.5);
+  animation: buttonGlow 3s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #aa33ff 0%, #33eeff 100%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border-radius: inherit;
+}
+
+.btn:hover {
+  transform: scale(1.06);
+  box-shadow:
+    0 0 18px #8b00ffaa,
+    0 0 40px #00ffff66,
+    0 6px 24px rgba(0,0,0,0.6);
+  filter: brightness(1.12);
+}
+
+.btn:hover::before {
+  opacity: 1;
+}
+
+.btn:active {
+  transform: scale(0.96);
+  box-shadow:
+    0 0 8px #8b00ff44,
+    0 2px 8px rgba(0,0,0,0.5);
+  filter: brightness(0.92);
+}
+
+.btn span,
+.btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Named buttons */
+#playBtn   { background: linear-gradient(135deg, #8b00ff 0%, #00ccdd 100%); }
+#skinsBtn  { background: linear-gradient(135deg, #4400aa 0%, #007799 100%); }
+#retryBtn  { background: linear-gradient(135deg, #8b00ff 0%, #00ccdd 100%); }
+#menuBtn   { background: linear-gradient(135deg, #330055 0%, #003344 100%); }
+#closeSkins {
+  background: linear-gradient(135deg, #550000 0%, #330033 100%);
+  margin-top: 8px;
+}
+
+/* ============================================================
+   HUD
+   ============================================================ */
+#hud {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#hud.active {
+  display: block;
+}
+
+#timer {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(1.1rem, 3vw, 1.6rem);
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+  text-shadow:
+    0 1px 4px rgba(0,0,0,0.8),
+    0 0 12px rgba(139,0,255,0.4);
+}
+
+#combo {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  font-size: clamp(1.1rem, 3vw, 1.6rem);
+  font-weight: 900;
+  color: #ffd700;
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-shadow:
+    0 0 10px #ffd700aa,
+    0 0 24px #ffa500aa,
+    0 1px 4px rgba(0,0,0,0.8);
+  transition: color 0.1s ease;
+}
+
+#combo.pulse {
+  animation: comboGrow 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+/* ============================================================
+   BOSS HP BAR
+   ============================================================ */
+#bossBar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 80;
+  padding: 6px 0 4px;
+  background: rgba(0, 0, 0, 0.75);
+  border-bottom: 1px solid rgba(139,0,255,0.35);
+  animation: slideDown 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+#bossBar.active {
+  display: block;
+}
+
+#bossName {
+  display: block;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 0 8px #8b00ffaa;
+  margin-bottom: 4px;
+}
+
+/* Track */
+#bossBar .bar-track {
+  position: relative;
+  width: calc(100% - 24px);
+  height: 18px;
+  margin: 0 12px;
+  background: #111122;
+  border-radius: 3px;
+  overflow: hidden;
+  /* segmented grid overlay */
+  box-shadow:
+    inset 0 1px 3px rgba(0,0,0,0.6),
+    0 0 6px rgba(139,0,255,0.3);
+}
+
+/* Segmented appearance via repeating gradient */
+#bossBar .bar-track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 19px,
+    rgba(0,0,0,0.4) 19px,
+    rgba(0,0,0,0.4) 20px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+#bossBarFill {
+  height: 100%;
+  width: 100%;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #22ee55 0%,
+    #aaee00 40%,
+    #ffaa00 70%,
+    #ff3333 100%
+  );
+  transition: width 0.3s ease;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 10px rgba(255, 80, 0, 0.5);
+}
+
+/* ============================================================
+   DEATH SCREEN
+   ============================================================ */
+#gameOver {
+  gap: 16px;
+  text-align: center;
+  padding: 28px 24px;
+}
+
+#gameOver h2 {
+  font-size: clamp(3rem, 10vw, 6rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff3333;
+  animation: flicker 2.5s linear infinite;
+  line-height: 1;
+}
+
+#finalStats {
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  color: #00ff88;
+  background: rgba(0, 20, 0, 0.55);
+  border: 1px solid #00ff8844;
+  border-radius: 8px;
+  padding: 16px 24px;
+  text-align: left;
+  line-height: 2;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 6px #00ff8866;
+  max-width: 360px;
+  width: 100%;
+}
+
+#finalStats span {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.game-over-buttons {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* ============================================================
+   SKIN SELECTOR
+   ============================================================ */
+#skinSelector {
+  gap: 0;
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.skin-selector-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px 24px 24px;
+  width: 100%;
+  max-width: 680px;
+  margin: auto;
+  max-height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #8b00ff55 transparent;
+}
+
+.skin-selector-inner::-webkit-scrollbar {
+  width: 6px;
+}
+.skin-selector-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+.skin-selector-inner::-webkit-scrollbar-thumb {
+  background: #8b00ff88;
+  border-radius: 3px;
+}
+
+#skinSelector h2 {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow:
+    0 0 10px #8b00ff,
+    0 0 24px #8b00ff88;
+}
+
+#skinGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.skin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 10px;
+  background: rgba(15, 8, 35, 0.85);
+  border: 2px solid #8b00ff66;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.skin-card:hover {
+  border-color: #00ffff;
+  transform: scale(1.07);
+  box-shadow:
+    0 0 12px #00ffff55,
+    0 0 28px #00ffff22;
+}
+
+.skin-card.selected {
+  border-color: #ffd700;
+  box-shadow:
+    0 0 14px #ffd70088,
+    0 0 32px #ffd70044;
+}
+
+.skin-card .skin-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background: rgba(139,0,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.skin-card .skin-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cccccc;
+  text-align: center;
+  word-break: break-word;
+}
+
+.skin-card.selected .skin-name {
+  color: #ffd700;
+  text-shadow: 0 0 6px #ffd70099;
+}
+
+/* ============================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================ */
+@media (max-width: 480px) {
+  #timer {
+    top: 14px;
+    left: 14px;
+  }
+
+  #combo {
+    top: 14px;
+    right: 14px;
+  }
+
+  .btn {
+    min-width: 140px;
+    padding: 12px 24px;
+  }
+
+  #skinGrid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px;
+  }
+
+  .skin-card .skin-preview {
+    width: 44px;
+    height: 44px;
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 360px) {
+  #mainMenu h1 {
+    font-size: 2.2rem;
+  }
+
+  #gameOver h2 {
+    font-size: 2.8rem;
+  }
+}
