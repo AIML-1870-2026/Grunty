@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <span class="logo">&#127748; Weather Dashboard</span>
+      </div>
+      <div class="header-right">
+        <div class="unit-toggle">
+          <button id="btn-f" class="unit-btn active" aria-label="Switch to Fahrenheit">°F</button>
+          <button id="btn-c" class="unit-btn" aria-label="Switch to Celsius">°C</button>
+        </div>
+        <button id="bg-toggle-btn" class="icon-btn" aria-label="Customize background" title="Customize background">&#127912;</button>
+      </div>
+    </header>
+
+    <!-- Background Customizer Drawer -->
+    <div id="bg-drawer" class="bg-drawer hidden" role="dialog" aria-label="Background customizer">
+      <div class="bg-drawer-header">
+        <span class="bg-drawer-title">Background</span>
+        <button id="bg-close-btn" class="icon-btn" aria-label="Close">&#10005;</button>
+      </div>
+
+      <div class="bg-section-label">Mode</div>
+      <div class="bg-mode-row">
+        <button id="bg-mode-auto" class="mode-btn active">Auto (weather)</button>
+        <button id="bg-mode-custom" class="mode-btn">Custom</button>
+      </div>
+
+      <div id="bg-custom-options" class="hidden">
+        <div class="bg-section-label">Presets</div>
+        <div class="preset-grid" id="preset-grid"></div>
+
+        <div class="bg-section-label">Solid Color</div>
+        <div class="color-picker-row">
+          <input type="color" id="bg-color-a" value="#1a1a2e" aria-label="Background color" />
+          <span class="color-picker-hint">Pick any color</span>
+        </div>
+
+        <div class="bg-section-label">Gradient (two colors)</div>
+        <div class="color-picker-row">
+          <input type="color" id="grad-color-a" value="#1a1a2e" aria-label="Gradient start color" />
+          <span class="color-picker-hint">&#8594;</span>
+          <input type="color" id="grad-color-b" value="#0f3460" aria-label="Gradient end color" />
+          <button id="apply-grad-btn" class="apply-btn">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <section class="search-section">
+      <div class="search-bar" id="search-bar">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search for a city..."
+          autocomplete="off"
+          aria-label="City search"
+        />
+        <button id="search-btn" aria-label="Search">Search</button>
+      </div>
+      <div class="recent-searches" id="recent-searches"></div>
+      <div class="error-msg" id="error-msg" role="alert" aria-live="polite"></div>
+    </section>
+
+    <!-- Main content -->
+    <main id="main-content" class="hidden">
+
+      <div class="weather-grid">
+
+        <!-- Current conditions -->
+        <div class="current-panel">
+          <div class="city-name" id="city-name"></div>
+          <div class="local-time" id="local-time"></div>
+          <div class="condition-row">
+            <img id="condition-icon" src="" alt="Weather icon" />
+            <span id="condition-desc"></span>
+          </div>
+          <div class="temp-main" id="temp-main"></div>
+          <div class="feels-like" id="feels-like"></div>
+          <button id="pin-btn" class="pin-btn hidden" aria-label="Pin city for comparison">&#128204; Pin for Comparison</button>
+        </div>
+
+        <!-- Details panel -->
+        <div class="details-panel">
+          <div class="detail-item">
+            <span class="detail-label">Humidity</span>
+            <span class="detail-value" id="humidity"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Wind</span>
+            <span class="detail-value" id="wind"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Visibility</span>
+            <span class="detail-value" id="visibility"></span>
+          </div>
+          <div class="detail-item" id="aqi-row" style="display:none">
+            <span class="detail-label">Air Quality</span>
+            <span class="detail-value" id="aqi-value"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Sunrise</span>
+            <span class="detail-value" id="sunrise"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Sunset</span>
+            <span class="detail-value" id="sunset"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 5-Day Forecast -->
+      <section class="forecast-section">
+        <h2 class="forecast-title">5-Day Forecast</h2>
+        <div class="forecast-strip" id="forecast-strip"></div>
+      </section>
+
+      <!-- City Comparison -->
+      <section class="comparison-section hidden" id="comparison-section">
+        <div class="comparison-header">
+          <h2 class="forecast-title">City Comparison</h2>
+          <span class="comparison-hint">Up to 3 pinned cities</span>
+        </div>
+        <div class="comparison-strip" id="comparison-strip"></div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
