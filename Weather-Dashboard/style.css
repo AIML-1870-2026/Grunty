@@ -223,6 +223,47 @@ input[type="color"] {
   color: #fff;
 }
 
+/* ===== API Key Banner ===== */
+.api-key-banner {
+  background: rgba(251, 211, 141, 0.12);
+  border: 1px solid rgba(251, 211, 141, 0.4);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.api-key-banner-text {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.api-key-banner-text a {
+  color: var(--accent);
+}
+
+.api-key-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.api-key-input-row input {
+  flex: 1;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.api-key-input-row input:focus {
+  border-color: var(--accent);
+}
+
 /* ===== Search ===== */
 .search-section {
   margin-bottom: 28px;

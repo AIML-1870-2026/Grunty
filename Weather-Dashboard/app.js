@@ -15,6 +15,27 @@ const btnF         = document.getElementById('btn-f');
 const btnC         = document.getElementById('btn-c');
 
 /* ===== Init ===== */
+// Show API key banner if no key is available
+(function initApiKeyBanner() {
+  const banner = document.getElementById('api-key-banner');
+  const input  = document.getElementById('api-key-input');
+  const saveBtn = document.getElementById('api-key-save-btn');
+
+  if (!API_KEY) banner.classList.remove('hidden');
+
+  saveBtn.addEventListener('click', () => {
+    const val = input.value.trim();
+    if (!val) return;
+    localStorage.setItem('wx_api_key', val);
+    // eslint-disable-next-line no-global-assign
+    API_KEY = val;
+    banner.classList.add('hidden');
+    input.value = '';
+  });
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') saveBtn.click(); });
+})();
+
 renderRecent();
 
 searchBtn.addEventListener('click', handleSearch);

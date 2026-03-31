@@ -57,6 +57,17 @@
       </div>
     </div>
 
+    <!-- API Key Setup Banner -->
+    <div id="api-key-banner" class="api-key-banner hidden">
+      <div class="api-key-banner-text">
+        <strong>API key required.</strong> Enter your <a href="https://openweathermap.org/api" target="_blank" rel="noopener">OpenWeatherMap</a> key to use this dashboard.
+      </div>
+      <div class="api-key-input-row">
+        <input type="text" id="api-key-input" placeholder="Paste your API key here..." autocomplete="off" />
+        <button id="api-key-save-btn" class="apply-btn">Save</button>
+      </div>
+    </div>
+
     <!-- Search -->
     <section class="search-section">
       <div class="search-bar" id="search-bar">
@@ -140,7 +151,13 @@
 
   </div>
 
-  <script src="config.js"></script>
+  <script src="config.js" onerror=""></script>
+  <script>
+    // Fall back to localStorage if config.js is absent or key is placeholder
+    if (typeof API_KEY === 'undefined' || !API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
+      var API_KEY = localStorage.getItem('wx_api_key') || '';
+    }
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
