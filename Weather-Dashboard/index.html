@@ -151,13 +151,7 @@
 
   </div>
 
-  <script src="config.js" onerror=""></script>
-  <script>
-    // Fall back to localStorage if config.js is absent or key is placeholder
-    if (typeof API_KEY === 'undefined' || !API_KEY || API_KEY === 'YOUR_API_KEY_HERE') {
-      var API_KEY = localStorage.getItem('wx_api_key') || '';
-    }
-  </script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
