@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEO Close Approach Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-left">
+      <h1>🌍 NEO Close Approach Tracker</h1>
+      <p class="subtitle">Live data from NASA NeoWs · JPL SBDB · JPL Sentry</p>
+    </div>
+    <div class="header-right">
+      <div class="api-status-bar" aria-live="polite" aria-label="API status indicators">
+        <span class="status-indicator" id="status-neows" data-state="idle" title="NASA NeoWs">NeoWs</span>
+        <span class="status-indicator" id="status-sbdb" data-state="idle" title="JPL SBDB">SBDB</span>
+        <span class="status-indicator" id="status-sentry" data-state="idle" title="JPL Sentry">Sentry</span>
+      </div>
+      <p class="last-updated" id="last-updated">Last updated: —</p>
+    </div>
+  </header>
+
+  <section class="filter-bar" aria-label="Filters">
+    <div class="filter-group">
+      <label for="filter-days">Date range</label>
+      <select id="filter-days">
+        <option value="7" selected>Next 7 days</option>
+        <option value="14">Next 14 days</option>
+        <option value="30">Next 30 days</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-dist">Max distance (AU)</label>
+      <input type="number" id="filter-dist" value="0.05" min="0.001" max="1" step="0.001" />
+    </div>
+    <div class="filter-group filter-group--check">
+      <input type="checkbox" id="filter-hazardous" />
+      <label for="filter-hazardous">Hazardous only</label>
+    </div>
+    <button class="btn-refresh" id="btn-refresh" aria-label="Refresh all data">
+      <span class="refresh-icon" id="refresh-icon">↻</span> Refresh
+    </button>
+  </section>
+
+  <section class="viz-section" aria-label="3D Earth visualization">
+    <div id="earth-viz"></div>
+    <div class="viz-legend">
+      <span class="legend-item legend-item--normal">Normal NEO</span>
+      <span class="legend-item legend-item--pha">Potentially Hazardous</span>
+      <span class="legend-item legend-item--sentry">Sentry Risk</span>
+      <span class="viz-hint">Drag to rotate · Click object for details</span>
+    </div>
+  </section>
+
+  <main class="main-grid">
+    <section class="panel panel--approaches" aria-label="Close approaches">
+      <h2 class="panel-title">Close Approaches <span class="count-badge" id="approach-count"></span></h2>
+      <div class="table-scroll" role="region" aria-label="Close approaches table" tabindex="0">
+        <table id="approaches-table" aria-label="NEO close approaches">
+          <thead>
+            <tr>
+              <th role="columnheader" aria-sort="none" data-col="name" tabindex="0">Object</th>
+              <th role="columnheader" aria-sort="ascending" data-col="date" tabindex="0">Date (UTC) ↑</th>
+              <th role="columnheader" aria-sort="none" data-col="dist_au" tabindex="0">Dist (AU)</th>
+              <th role="columnheader" aria-sort="none" data-col="dist_ld" tabindex="0">Dist (LD)</th>
+              <th role="columnheader" aria-sort="none" data-col="velocity" tabindex="0">Vel (km/s)</th>
+              <th role="columnheader" aria-sort="none" data-col="diameter" tabindex="0">Diam (km)</th>
+              <th role="columnheader" aria-sort="none" data-col="magnitude" tabindex="0">Mag (H)</th>
+              <th role="columnheader" aria-sort="none" data-col="hazardous" tabindex="0">PHA</th>
+              <th role="columnheader" aria-sort="none" data-col="sentry" tabindex="0">Sentry</th>
+            </tr>
+          </thead>
+          <tbody id="approaches-tbody">
+            <tr class="loading-row">
+              <td colspan="9">
+                <div class="loading-spinner" aria-label="Loading data"></div>
+                <span>Fetching close approach data…</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="panel panel--sentry" aria-label="Sentry impact risks">
+      <h2 class="panel-title">⚠ Sentry Impact Risks <span class="count-badge" id="sentry-count"></span></h2>
+      <div id="sentry-list" aria-live="polite">
+        <div class="loading-spinner" aria-label="Loading Sentry data"></div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="detail-overlay" class="detail-overlay" role="dialog" aria-modal="true" aria-labelledby="detail-title" aria-hidden="true">
+    <div class="detail-panel" id="detail-panel">
+      <button class="detail-close" id="detail-close" aria-label="Close detail panel">✕</button>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"></script>
+  <script src="viz.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
