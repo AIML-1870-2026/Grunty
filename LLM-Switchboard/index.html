@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Switchboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/ajv@6/dist/ajv.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --border: #2a2a4a;
+      --text: #e2e8f0;
+      --text-muted: #8892a4;
+      --anthropic: #D97757;
+      --openai: #10A37F;
+      --active: #D97757;
+      --btn-bg: #2d2d50;
+      --btn-hover: #3d3d65;
+      --input-bg: #12122a;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --mono: 'Courier New', Courier, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--active);
+    }
+
+    #header-provider {
+      font-size: 12px;
+      color: var(--active);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* Provider toggle */
+    .provider-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .provider-btn {
+      padding: 9px 16px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .provider-btn.active[data-provider="anthropic"] {
+      border-color: var(--anthropic);
+      color: var(--anthropic);
+      background: rgba(217, 119, 87, 0.1);
+    }
+
+    .provider-btn.active[data-provider="openai"] {
+      border-color: var(--openai);
+      color: var(--openai);
+      background: rgba(16, 163, 127, 0.1);
+    }
+
+    .provider-btn:hover:not(.active) {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    /* Inputs */
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    textarea,
+    select {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--active);
+    }
+
+    select { cursor: pointer; }
+    select option { background: var(--card); }
+
+    textarea {
+      resize: vertical;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.5;
+    }
+
+    textarea.mono { font-family: var(--mono); font-size: 12px; }
+
+    /* Buttons */
+    .btn {
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--btn-bg);
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--text-muted); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-send {
+      background: var(--active);
+      border: 2px solid var(--active);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 11px 40px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-send:hover:not(:disabled) { filter: brightness(1.12); }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-send.cancel { background: var(--error); border-color: var(--error); }
+
+    /* Key row */
+    .key-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .key-label {
+      width: 76px;
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .key-wrap {
+      flex: 1;
+      display: flex;
+      gap: 6px;
+    }
+
+    .key-input {
+      flex: 1;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .key-status {
+      font-size: 11px;
+      min-height: 16px;
+      padding-left: 84px;
+    }
+
+    .key-status.valid   { color: var(--success); }
+    .key-status.invalid { color: var(--error); }
+    .key-status.checking { color: var(--warning); }
+
+    .key-note {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 10px;
+    }
+
+    /* Library row */
+    .lib-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .lib-row select { flex: 1; }
+
+    /* Field label */
+    .field-label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .field-wrap { margin-bottom: 10px; }
+
+    /* Checkbox */
+    .check-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-label input[type="checkbox"] {
+      width: auto;
+      cursor: pointer;
+      accent-color: var(--active);
+    }
+
+    .schema-opts {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 10px;
+    }
+
+    .schema-err {
+      color: var(--error);
+      font-size: 11px;
+      font-family: var(--mono);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    /* Controls grid */
+    .ctrl-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .ctrl-item label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .val-display {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      padding: 0;
+      border: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--active);
+      cursor: pointer;
+    }
+
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+
+    .send-row { display: flex; justify-content: center; }
+
+    /* Output tabs */
+    .out-tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: -1px;
+      transition: all 0.18s;
+    }
+
+    .tab-btn.active {
+      color: var(--active);
+      border-bottom-color: var(--active);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    .out-view {
+      min-height: 180px;
+      max-height: 480px;
+      overflow-y: auto;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .out-view.placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-style: italic;
+      font-size: 13px;
+    }
+
+    /* Streaming cursor */
+    .streaming::after {
+      content: '▋';
+      animation: blink 0.9s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* JSON syntax highlighting */
+    .jk { color: #7dd3fc; }
+    .js { color: #86efac; }
+    .jn { color: #fca5a5; }
+    .jb { color: #fbbf24; }
+    .jl { color: #c084fc; }
+
+    /* Diff */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .diff-pane h4 {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .diff-box {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      max-height: 380px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+    }
+
+    /* Validation banner */
+    .val-banner {
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid var(--warning);
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--warning);
+      margin-bottom: 10px;
+    }
+
+    /* Metadata */
+    .meta-row {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      padding: 8px 0 4px;
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+    }
+
+    /* Output actions */
+    .out-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    /* History */
+    .hist-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hist-header .card-title { margin-bottom: 0; }
+
+    .hist-panel { margin-top: 12px; }
+    .hist-panel.hidden { display: none; }
+
+    .hist-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 12px;
+      padding: 18px;
+    }
+
+    .hist-entry {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.18s;
+    }
+
+    .hist-entry:hover { border-color: var(--active); }
+
+    .hist-entry .entry-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .hist-entry .entry-preview {
+      font-size: 12px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    /* Compare mode */
+    .compare-divider {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin: 14px 0 12px;
+      position: relative;
+    }
+    .compare-divider::before, .compare-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: calc(50% - 20px);
+      height: 1px;
+      background: var(--border);
+    }
+    .compare-divider::before { left: 0; }
+    .compare-divider::after  { right: 0; }
+
+    .compare-models-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .compare-models-row label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+
+    .btn-compare {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 9px 22px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .btn-compare:hover:not(:disabled) {
+      border-color: var(--text);
+      color: var(--text);
+    }
+    .btn-compare.running {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+    .btn-compare:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Compare output card */
+    .cmp-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .cmp-col-header {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 6px 10px;
+      border-radius: 4px 4px 0 0;
+      margin-bottom: 0;
+    }
+
+    .cmp-col-header.anthropic { background: rgba(217,119,87,0.15); color: var(--anthropic); border: 1px solid rgba(217,119,87,0.3); border-bottom: none; }
+    .cmp-col-header.openai    { background: rgba(16,163,127,0.15);  color: var(--openai);    border: 1px solid rgba(16,163,127,0.3);  border-bottom: none; }
+
+    .cmp-out-box {
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 0 0 4px 4px;
+      padding: 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .cmp-out-box.anthropic-border { border-color: rgba(217,119,87,0.4); }
+    .cmp-out-box.openai-border    { border-color: rgba(16,163,127,0.4); }
+
+    .cmp-out-box.placeholder {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-family: inherit; font-style: italic;
+    }
+
+    .cmp-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      padding: 5px 0;
+      min-height: 20px;
+    }
+
+    .cmp-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#9889; LLM Switchboard</h1>
+  <span id="header-provider">ANTHROPIC</span>
+</header>
+
+<div class="container">
+
+  <!-- Provider & Model -->
+  <div class="card">
+    <div class="card-title">Provider &amp; Model</div>
+    <div class="provider-toggle">
+      <button class="provider-btn active" data-provider="anthropic" onclick="setProvider('anthropic')">Anthropic</button>
+      <button class="provider-btn" data-provider="openai" onclick="setProvider('openai')">OpenAI</button>
+    </div>
+    <label class="field-label">Model</label>
+    <select id="model-select"></select>
+  </div>
+
+  <!-- API Keys -->
+  <div class="card">
+    <div class="card-title">API Key Vault</div>
+
+    <div class="key-row">
+      <span class="key-label">Anthropic</span>
+      <div class="key-wrap">
+        <input type="password" id="anthropic-key" class="key-input" placeholder="sk-ant-..." autocomplete="off">
+        <button class="btn" onclick="toggleKey('anthropic-key', this)">Show</button>
+        <button class="btn" onclick="saveKey('anthropic')">Save</button>
+      </div>
+    </div>
+    <div id="anthropic-key-status" class="key-status"></div>
+
+    <div class="key-row" style="margin-top:10px;">
+      <span class="key-label">OpenAI</span>
+      <div class="key-wrap">
+        <input type="password" id="openai-key" class="key-input" placeholder="sk-..." autocomplete="off">
+        <button class="btn" onclick="toggleKey('openai-key', this)">Show</button>
+        <button class="btn" onclick="saveKey('openai')">Save</button>
+      </div>
+    </div>
+    <div id="openai-key-status" class="key-status"></div>
+
+    <p class="key-note">Keys are stored locally and never transmitted to any server other than the provider's API endpoint.</p>
+  </div>
+
+  <!-- Prompt Composer -->
+  <div class="card">
+    <div class="card-title">Prompt Composer</div>
+    <div class="lib-row">
+      <select id="prompt-select">
+        <option value="">&#8212; Select a preloaded prompt &#8212;</option>
+      </select>
+      <button class="btn" onclick="loadPrompt()">Load</button>
+      <button class="btn" onclick="clearPrompt()">Clear</button>
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">System Prompt</label>
+      <textarea id="system-prompt" rows="4" placeholder="You are a helpful assistant..."></textarea>
+    </div>
+    <div class="field-wrap" style="margin-bottom:0;">
+      <label class="field-label">User Message <span style="color:var(--error)">*</span></label>
+      <textarea id="user-message" rows="6" placeholder="Enter your message here..."></textarea>
+    </div>
+  </div>
+
+  <!-- JSON Schema Editor -->
+  <div class="card">
+    <div class="card-title">JSON Schema Editor</div>
+    <div class="lib-row">
+      <select id="schema-select">
+        <option value="">&#8212; Select a preloaded schema &#8212;</option>
+      </select>
+      <button class="btn" onclick="loadSchema()">Load</button>
+      <button class="btn" onclick="clearSchema()">Clear</button>
+    </div>
+    <div class="schema-opts">
+      <label class="check-label">
+        <input type="checkbox" id="enforce-json"> Enforce JSON output
+      </label>
+      <label class="check-label">
+        <input type="checkbox" id="validate-receipt"> Validate on receipt
+      </label>
+    </div>
+    <textarea id="schema-editor" class="mono" rows="8"
+      placeholder='{"type": "object", "properties": {...}}'
+      oninput="liveValidateSchema()"></textarea>
+    <div id="schema-err" class="schema-err"></div>
+  </div>
+
+  <!-- Run Controls -->
+  <div class="card">
+    <div class="card-title">Run Controls</div>
+    <div class="ctrl-grid">
+      <div class="ctrl-item">
+        <label>Temperature: <span class="val-display" id="temp-val">0.7</span></label>
+        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7"
+          oninput="document.getElementById('temp-val').textContent=this.value">
+      </div>
+      <div class="ctrl-item">
+        <label>Max Tokens</label>
+        <input type="number" id="max-tokens" value="1024" min="1" max="8192">
+      </div>
+      <div class="ctrl-item">
+        <label>Options</label>
+        <label class="check-label" style="margin-top:5px;">
+          <input type="checkbox" id="stream-toggle"> Stream response
+        </label>
+      </div>
+    </div>
+    <div class="send-row">
+      <button class="btn-send" id="send-btn" onclick="handleSend()">&#9654; Send</button>
+    </div>
+
+    <div class="compare-divider">or compare both</div>
+    <div class="compare-models-row">
+      <div>
+        <label>Anthropic model</label>
+        <select id="cmp-model-anthropic"></select>
+      </div>
+      <div>
+        <label>OpenAI model</label>
+        <select id="cmp-model-openai"></select>
+      </div>
+      <button class="btn-compare" id="cmp-btn" onclick="handleCompare()">&#8644; Compare Both</button>
+    </div>
+  </div>
+
+  <!-- Output Panel -->
+  <div class="card">
+    <div class="card-title">Output</div>
+    <div id="val-banner" class="val-banner" style="display:none;"></div>
+    <div class="out-tabs">
+      <button class="tab-btn active" data-tab="raw" onclick="setTab('raw')">Raw Text</button>
+      <button class="tab-btn" data-tab="parsed" onclick="setTab('parsed')">Parsed JSON</button>
+      <button class="tab-btn" data-tab="diff" onclick="setTab('diff')">Diff View</button>
+    </div>
+    <div id="pane-raw" class="out-view placeholder">No response yet. Configure and send a request above.</div>
+    <div id="pane-parsed" class="out-view" style="display:none;"></div>
+    <div id="pane-diff" style="display:none;">
+      <div class="diff-grid">
+        <div class="diff-pane">
+          <h4 id="diff-label-a">Previous</h4>
+          <div id="diff-a" class="diff-box">(no previous response)</div>
+        </div>
+        <div class="diff-pane">
+          <h4 id="diff-label-b">Current</h4>
+          <div id="diff-b" class="diff-box">(no response yet)</div>
+        </div>
+      </div>
+    </div>
+    <div id="meta-row" class="meta-row" style="display:none;"></div>
+    <div class="out-actions">
+      <button class="btn" id="btn-copy" onclick="doCopy()" disabled>Copy</button>
+      <button class="btn" id="btn-export" onclick="doExport()" disabled>Export JSON</button>
+      <button class="btn" id="btn-save-hist" onclick="doSaveHistory()" disabled>Save to History</button>
+    </div>
+  </div>
+
+  <!-- Compare Output -->
+  <div class="card" id="compare-card" style="display:none;">
+    <div class="card-title">Side-by-Side Comparison</div>
+    <div class="cmp-cols">
+      <div>
+        <div class="cmp-col-header anthropic" id="cmp-header-a">Anthropic</div>
+        <div id="cmp-out-a" class="cmp-out-box anthropic-border placeholder">Waiting...</div>
+        <div id="cmp-meta-a" class="cmp-meta"></div>
+      </div>
+      <div>
+        <div class="cmp-col-header openai" id="cmp-header-b">OpenAI</div>
+        <div id="cmp-out-b" class="cmp-out-box openai-border placeholder">Waiting...</div>
+        <div id="cmp-meta-b" class="cmp-meta"></div>
+      </div>
+    </div>
+    <div class="cmp-actions">
+      <button class="btn" id="cmp-copy-a" onclick="cmpCopy('a')" disabled>Copy Anthropic</button>
+      <button class="btn" id="cmp-copy-b" onclick="cmpCopy('b')" disabled>Copy OpenAI</button>
+      <button class="btn" id="cmp-export-a" onclick="cmpExport('a')" disabled>Export Anthropic JSON</button>
+      <button class="btn" id="cmp-export-b" onclick="cmpExport('b')" disabled>Export OpenAI JSON</button>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card">
+    <div class="hist-header">
+      <div class="card-title">Session History</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="toggleHistory()">Show / Hide</button>
+        <button class="btn" onclick="clearHistory()">Clear All</button>
+      </div>
+    </div>
+    <div id="hist-panel" class="hist-panel hidden">
+      <div id="hist-list"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ─── MODELS ──────────────────────────────────────────────────────────────────
+
+const MODELS = {
+  anthropic: [
+    { label: 'Claude Opus 4.6',   value: 'claude-opus-4-6',          ctx: 200000 },
+    { label: 'Claude Sonnet 4.6', value: 'claude-sonnet-4-6',         ctx: 200000 },
+    { label: 'Claude Haiku 4.5',  value: 'claude-haiku-4-5-20251001', ctx: 200000 }
+  ],
+  openai: [
+    { label: 'GPT-4o',      value: 'gpt-4o',      ctx: 128000 },
+    { label: 'GPT-4o Mini', value: 'gpt-4o-mini',  ctx: 128000 },
+    { label: 'GPT-4 Turbo', value: 'gpt-4-turbo',  ctx: 128000 },
+    { label: 'o3',          value: 'o3',            ctx: 200000 },
+    { label: 'o4-mini',     value: 'o4-mini',       ctx: 200000 }
+  ]
+};
+
+// ─── PROMPTS ─────────────────────────────────────────────────────────────────
+
+const PROMPTS = [
+  {
+    id: 'p01', name: 'Data Extractor',
+    system: 'You are a data extraction engine. Extract all structured fields from the unstructured text provided. Return only valid JSON matching the schema provided.',
+    user: 'Extract all relevant data fields from the following text:\n\n"""\n{{PASTE YOUR TEXT HERE}}\n"""'
+  },
+  {
+    id: 'p02', name: 'Sentiment Classifier',
+    system: 'You are a sentiment analysis engine. You receive text and return only valid JSON matching the schema provided. Do not explain your answer.',
+    user: 'Classify the sentiment of the following text:\n\n"""\n{{PASTE YOUR TEXT HERE}}\n"""'
+  },
+  {
+    id: 'p03', name: 'JSON Summarizer',
+    system: 'You are a JSON summarization engine. You receive a JSON blob and return a concise, human-readable summary of its contents. Be specific and mention key values.',
+    user: 'Summarize the following JSON:\n\n```json\n{{PASTE YOUR JSON HERE}}\n```'
+  },
+  {
+    id: 'p04', name: 'Code Reviewer',
+    system: 'You are an expert code reviewer. Analyze the provided code snippet and return a structured report of issues found, their severity, and concrete suggestions to fix them.',
+    user: 'Review the following code:\n\n```\n{{PASTE YOUR CODE HERE}}\n```'
+  },
+  {
+    id: 'p05', name: 'Entity Recognizer',
+    system: 'You are a named entity recognition (NER) engine. Identify all named entities in the text and label them by type: PERSON, ORG, LOCATION, DATE, or OTHER. Return only valid JSON.',
+    user: 'Identify all named entities in the following text:\n\n"""\n{{PASTE YOUR TEXT HERE}}\n"""'
+  },
+  {
+    id: 'p06', name: 'Question Answerer',
+    system: 'You are a question-answering engine. Answer the user\'s question using ONLY the context provided. If the answer is not in the context, say so explicitly.',
+    user: 'Context:\n"""\n{{PASTE YOUR CONTEXT HERE}}\n"""\n\nQuestion: {{YOUR QUESTION HERE}}'
+  },
+  {
+    id: 'p07', name: 'Email Drafter',
+    system: 'You are a professional email drafting assistant. Draft a clear, concise, and professional reply to the email thread provided. Match the tone of the original.',
+    user: 'Draft a reply to the following email thread:\n\n"""\n{{PASTE EMAIL THREAD HERE}}\n"""'
+  },
+  {
+    id: 'p08', name: 'Keyword Extractor',
+    system: 'You are a keyword extraction engine. Identify and rank the most important keywords from the provided text by relevance. Return only valid JSON.',
+    user: 'Extract and rank keywords from the following text:\n\n"""\n{{PASTE YOUR TEXT HERE}}\n"""'
+  }
+];
+
+// ─── SCHEMAS ─────────────────────────────────────────────────────────────────
+
+const SCHEMAS = [
+  {
+    id: 's01', name: 'Sentiment Result',
+    schema: {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      title: "SentimentResult", type: "object",
+      required: ["label","confidence","reasoning"],
+      properties: {
+        label:      { type: "string", enum: ["positive","neutral","negative"] },
+        confidence: { type: "number", minimum: 0, maximum: 1, description: "Confidence score 0.0–1.0" },
+        reasoning:  { type: "string", description: "One-sentence explanation" }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    id: 's02', name: 'Entity List',
+    schema: {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      title: "EntityList", type: "object",
+      required: ["entities"],
+      properties: {
+        entities: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["text","type","start","end"],
+            properties: {
+              text:  { type: "string" },
+              type:  { type: "string", enum: ["PERSON","ORG","LOCATION","DATE","OTHER"] },
+              start: { type: "integer" },
+              end:   { type: "integer" }
+            },
+            additionalProperties: false
+          }
+        }
+      }
+    }
+  },
+  {
+    id: 's03', name: 'Code Review Report',
+    schema: {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      title: "CodeReviewReport", type: "object",
+      required: ["summary","issues"],
+      properties: {
+        summary: { type: "string", description: "Overall assessment" },
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["severity","description","suggestion"],
+            properties: {
+              severity:    { type: "string", enum: ["critical","high","medium","low","info"] },
+              line:        { type: "integer" },
+              description: { type: "string" },
+              suggestion:  { type: "string" }
+            },
+            additionalProperties: false
+          }
+        }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    id: 's04', name: 'Keyword Rankings',
+    schema: {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      title: "KeywordRankings", type: "object",
+      required: ["keywords"],
+      properties: {
+        keywords: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["keyword","score"],
+            properties: {
+              keyword:   { type: "string" },
+              score:     { type: "number", minimum: 0, maximum: 1 },
+              frequency: { type: "integer" }
+            },
+            additionalProperties: false
+          }
+        }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    id: 's05', name: 'Generic Key-Value',
+    schema: {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      title: "KeyValuePairs", type: "object",
+      required: ["pairs"],
+      properties: {
+        pairs: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["key","value"],
+            properties: {
+              key:   { type: "string" },
+              value: { type: "string" }
+            },
+            additionalProperties: false
+          }
+        },
+        source_excerpt: { type: "string" }
+      }
+    }
+  },
+  {
+    id: 's06', name: 'Summarization Block',
+    schema: {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      title: "SummarizationBlock", type: "object",
+      required: ["headline","summary","key_points"],
+      properties: {
+        headline:   { type: "string", description: "One-line headline" },
+        summary:    { type: "string", description: "2–3 sentence summary" },
+        key_points: { type: "array", items: { type: "string" }, description: "Key takeaways" },
+        word_count: { type: "integer" }
+      },
+      additionalProperties: false
+    }
+  }
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+
+let provider    = 'anthropic';
+let curResponse = null;
+let prevResponse = null;
+let curMeta     = null;
+let lastReq     = null;
+let abortCtl    = null;
+let inFlight    = false;
+let activeTab   = 'raw';
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+function init() {
+  buildModelSelect();
+  buildPromptSelect();
+  buildSchemaSelect();
+  buildCompareSelects();
+  const ak = localStorage.getItem('llmsb_anthropic_key');
+  const ok = localStorage.getItem('llmsb_openai_key');
+  if (ak) document.getElementById('anthropic-key').value = ak;
+  if (ok) document.getElementById('openai-key').value = ok;
+  renderHistoryList();
+}
+
+function buildCompareSelects() {
+  document.getElementById('cmp-model-anthropic').innerHTML =
+    MODELS.anthropic.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+  document.getElementById('cmp-model-openai').innerHTML =
+    MODELS.openai.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+}
+
+function buildModelSelect() {
+  const sel = document.getElementById('model-select');
+  sel.innerHTML = MODELS[provider].map(m =>
+    `<option value="${m.value}">${m.label} (${(m.ctx/1000).toFixed(0)}K ctx)</option>`
+  ).join('');
+}
+
+function buildPromptSelect() {
+  const sel = document.getElementById('prompt-select');
+  sel.innerHTML = '<option value="">&#8212; Select a preloaded prompt &#8212;</option>' +
+    PROMPTS.map(p => `<option value="${p.id}">${p.id.toUpperCase()}: ${p.name}</option>`).join('');
+}
+
+function buildSchemaSelect() {
+  const sel = document.getElementById('schema-select');
+  sel.innerHTML = '<option value="">&#8212; Select a preloaded schema &#8212;</option>' +
+    SCHEMAS.map(s => `<option value="${s.id}">${s.id.toUpperCase()}: ${s.name}</option>`).join('');
+}
+
+// ─── PROVIDER ─────────────────────────────────────────────────────────────────
+
+function setProvider(p) {
+  provider = p;
+  document.querySelectorAll('.provider-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.provider === p)
+  );
+  const color = p === 'anthropic' ? '#D97757' : '#10A37F';
+  document.documentElement.style.setProperty('--active', color);
+  document.getElementById('header-provider').textContent = p.toUpperCase();
+  buildModelSelect();
+}
+
+// ─── API KEYS ─────────────────────────────────────────────────────────────────
+
+function toggleKey(id, btn) {
+  const el = document.getElementById(id);
+  const hidden = el.type === 'password';
+  el.type = hidden ? 'text' : 'password';
+  btn.textContent = hidden ? 'Hide' : 'Show';
+}
+
+async function saveKey(p) {
+  const key = document.getElementById(p + '-key').value.trim();
+  const statusEl = document.getElementById(p + '-key-status');
+  if (!key) { localStorage.removeItem('llmsb_' + p + '_key'); statusEl.textContent = ''; return; }
+  localStorage.setItem('llmsb_' + p + '_key', key);
+  statusEl.textContent = 'Validating...';
+  statusEl.className = 'key-status checking';
+  try {
+    const ok = await pingKey(p, key);
+    statusEl.textContent = ok ? '\u2713 Key accepted' : 'Key rejected by provider \u2014 check and re-enter.';
+    statusEl.className = 'key-status ' + (ok ? 'valid' : 'invalid');
+  } catch (e) {
+    statusEl.textContent = 'Validation error: ' + e.message;
+    statusEl.className = 'key-status invalid';
+  }
+}
+
+async function pingKey(p, key) {
+  if (p === 'anthropic') {
+    const r = await fetch('https://api.anthropic.com/v1/models', {
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      }
+    });
+    return r.ok;
+  } else {
+    const r = await fetch('https://api.openai.com/v1/models', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    return r.ok;
+  }
+}
+
+// ─── PROMPTS ──────────────────────────────────────────────────────────────────
+
+function loadPrompt() {
+  const id = document.getElementById('prompt-select').value;
+  if (!id) return;
+  const p = PROMPTS.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('system-prompt').value = p.system;
+  document.getElementById('user-message').value = p.user;
+}
+
+function clearPrompt() {
+  document.getElementById('system-prompt').value = '';
+  document.getElementById('user-message').value = '';
+  document.getElementById('prompt-select').value = '';
+}
+
+// ─── SCHEMA ───────────────────────────────────────────────────────────────────
+
+function loadSchema() {
+  const id = document.getElementById('schema-select').value;
+  if (!id) return;
+  const s = SCHEMAS.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('schema-editor').value = JSON.stringify(s.schema, null, 2);
+  liveValidateSchema();
+}
+
+function clearSchema() {
+  document.getElementById('schema-editor').value = '';
+  document.getElementById('schema-err').textContent = '';
+  document.getElementById('schema-select').value = '';
+}
+
+function liveValidateSchema() {
+  const val = document.getElementById('schema-editor').value.trim();
+  const errEl = document.getElementById('schema-err');
+  if (!val) { errEl.textContent = ''; return true; }
+  try { JSON.parse(val); errEl.textContent = ''; return true; }
+  catch (e) { errEl.textContent = '\u26a0 ' + e.message; return false; }
+}
+
+function getParsedSchema() {
+  const val = document.getElementById('schema-editor').value.trim();
+  if (!val) return null;
+  try { return JSON.parse(val); } catch { return null; }
+}
+
+// ─── SEND / CANCEL ────────────────────────────────────────────────────────────
+
+async function handleSend() {
+  if (inFlight) { if (abortCtl) abortCtl.abort(); return; }
+
+  const userMsg = document.getElementById('user-message').value.trim();
+  if (!userMsg) { alert('User message is required.'); return; }
+
+  const key = localStorage.getItem('llmsb_' + provider + '_key');
+  if (!key) { alert('Please save an API key for ' + provider + ' first.'); return; }
+
+  const enforceJson = document.getElementById('enforce-json').checked;
+  const schema = getParsedSchema();
+  if (enforceJson && !schema) { alert('JSON enforcement is on but schema is empty or invalid.'); return; }
+
+  const model       = document.getElementById('model-select').value;
+  const system      = document.getElementById('system-prompt').value.trim();
+  const temperature = parseFloat(document.getElementById('temperature').value);
+  const maxTokens   = parseInt(document.getElementById('max-tokens').value);
+  const stream      = document.getElementById('stream-toggle').checked;
+
+  lastReq = { provider, model, system, userMsg, schema };
+  setInFlight(true);
+  resetOutput();
+
+  const t0 = Date.now();
+  try {
+    abortCtl = new AbortController();
+    let result;
+    if (provider === 'anthropic') {
+      result = await callAnthropic({ key, model, system, userMsg, temperature, maxTokens, stream, enforceJson, schema });
+    } else {
+      result = await callOpenAI({ key, model, system, userMsg, temperature, maxTokens, stream, enforceJson, schema });
+    }
+    const latencyMs = Date.now() - t0;
+    curMeta = { ...result.meta, latencyMs };
+    prevResponse = curResponse;
+    curResponse  = result.text;
+    finalizeOutput(result.text, latencyMs);
+    if (document.getElementById('validate-receipt').checked && schema && result.text) {
+      runSchemaValidation(result.text, schema);
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      appendRaw('\n\n[Request cancelled]');
+    } else {
+      showError('Error: ' + e.message);
+    }
+  } finally {
+    setInFlight(false);
+    abortCtl = null;
+  }
+}
+
+function setInFlight(v) {
+  inFlight = v;
+  const btn = document.getElementById('send-btn');
+  btn.textContent = v ? '\u25a0 Cancel' : '\u25b6 Send';
+  btn.classList.toggle('cancel', v);
+}
+
+// ─── ANTHROPIC ────────────────────────────────────────────────────────────────
+
+async function callAnthropic({ key, model, system, userMsg, temperature, maxTokens, stream, enforceJson, schema }) {
+  const body = {
+    model, max_tokens: maxTokens, temperature,
+    messages: [{ role: 'user', content: userMsg }]
+  };
+  if (system) body.system = system;
+  if (enforceJson && schema) {
+    body.tools = [{
+      name: 'structured_output',
+      description: 'Output the response as structured JSON matching the schema.',
+      input_schema: schema
+    }];
+    body.tool_choice = { type: 'tool', name: 'structured_output' };
+  }
+  if (stream) body.stream = true;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body),
+    signal: abortCtl.signal
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || res.statusText);
+  }
+
+  if (stream) return streamAnthropic(res);
+  const data = await res.json();
+  return parseAnthropic(data);
+}
+
+function parseAnthropic(data) {
+  let text = '';
+  for (const blk of data.content || []) {
+    if (blk.type === 'text') text += blk.text;
+    else if (blk.type === 'tool_use') text = JSON.stringify(blk.input, null, 2);
+  }
+  return {
+    text,
+    meta: {
+      provider: 'Anthropic', model: data.model,
+      tokensIn: data.usage?.input_tokens || 0,
+      tokensOut: data.usage?.output_tokens || 0
+    }
+  };
+}
+
+async function streamAnthropic(res) {
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '', fullText = '', jsonBuf = '', isToolUse = false;
+  const meta = { provider: 'Anthropic', model: '', tokensIn: 0, tokensOut: 0 };
+
+  setStreamCursor(true);
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const s = line.slice(6).trim();
+      if (!s) continue;
+      let ev; try { ev = JSON.parse(s); } catch { continue; }
+      if (ev.type === 'message_start') {
+        meta.model    = ev.message?.model || '';
+        meta.tokensIn = ev.message?.usage?.input_tokens || 0;
+      }
+      if (ev.type === 'content_block_start' && ev.content_block?.type === 'tool_use') isToolUse = true;
+      if (ev.type === 'content_block_delta') {
+        const d = ev.delta;
+        if (d.type === 'text_delta')       { fullText += d.text;         appendRaw(d.text); }
+        if (d.type === 'input_json_delta') { jsonBuf  += d.partial_json; appendRaw(d.partial_json); }
+      }
+      if (ev.type === 'message_delta') meta.tokensOut = ev.usage?.output_tokens || 0;
+    }
+  }
+  setStreamCursor(false);
+
+  if (isToolUse && jsonBuf) {
+    try {
+      fullText = JSON.stringify(JSON.parse(jsonBuf), null, 2);
+      document.getElementById('pane-raw').textContent = fullText;
+    } catch { fullText = jsonBuf; }
+  }
+  return { text: fullText || jsonBuf, meta };
+}
+
+// ─── OPENAI ───────────────────────────────────────────────────────────────────
+
+async function callOpenAI({ key, model, system, userMsg, temperature, maxTokens, stream, enforceJson, schema }) {
+  const messages = [];
+  if (system) messages.push({ role: 'system', content: system });
+  messages.push({ role: 'user', content: userMsg });
+
+  const body = { model, messages, temperature, max_tokens: maxTokens };
+  if (enforceJson && schema) {
+    body.response_format = {
+      type: 'json_schema',
+      json_schema: { name: schema.title || 'output', strict: true, schema }
+    };
+  }
+  if (stream) body.stream = true;
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'Authorization': 'Bearer ' + key
+    },
+    body: JSON.stringify(body),
+    signal: abortCtl.signal
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || res.statusText);
+  }
+
+  if (stream) return streamOpenAI(res, model);
+  const data = await res.json();
+  return parseOpenAI(data);
+}
+
+function parseOpenAI(data) {
+  return {
+    text: data.choices?.[0]?.message?.content || '',
+    meta: {
+      provider: 'OpenAI', model: data.model,
+      tokensIn:  data.usage?.prompt_tokens     || 0,
+      tokensOut: data.usage?.completion_tokens || 0
+    }
+  };
+}
+
+async function streamOpenAI(res, model) {
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '', fullText = '';
+  const meta = { provider: 'OpenAI', model, tokensIn: 0, tokensOut: 0 };
+
+  setStreamCursor(true);
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const s = line.slice(6).trim();
+      if (!s || s === '[DONE]') continue;
+      let ev; try { ev = JSON.parse(s); } catch { continue; }
+      const delta = ev.choices?.[0]?.delta?.content;
+      if (delta) { fullText += delta; appendRaw(delta); }
+      if (ev.usage) {
+        meta.tokensIn  = ev.usage.prompt_tokens     || 0;
+        meta.tokensOut = ev.usage.completion_tokens || 0;
+      }
+    }
+  }
+  setStreamCursor(false);
+  return { text: fullText, meta };
+}
+
+// ─── OUTPUT RENDERING ─────────────────────────────────────────────────────────
+
+function setTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('pane-raw').style.display    = tab === 'raw'    ? 'block' : 'none';
+  document.getElementById('pane-parsed').style.display = tab === 'parsed' ? 'block' : 'none';
+  document.getElementById('pane-diff').style.display   = tab === 'diff'   ? 'block' : 'none';
+  if (tab === 'parsed' && curResponse) renderParsedJSON(curResponse);
+  if (tab === 'diff') renderDiff();
+}
+
+function resetOutput() {
+  const raw = document.getElementById('pane-raw');
+  raw.className = 'out-view';
+  raw.textContent = '';
+  document.getElementById('pane-parsed').innerHTML = '';
+  document.getElementById('val-banner').style.display = 'none';
+  document.getElementById('meta-row').style.display   = 'none';
+  document.getElementById('btn-copy').disabled       = true;
+  document.getElementById('btn-export').disabled     = true;
+  document.getElementById('btn-save-hist').disabled  = true;
+}
+
+function appendRaw(text) {
+  const el = document.getElementById('pane-raw');
+  el.textContent += text;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStreamCursor(on) {
+  document.getElementById('pane-raw').classList.toggle('streaming', on);
+}
+
+function finalizeOutput(text, latencyMs) {
+  const raw = document.getElementById('pane-raw');
+  raw.className = 'out-view';
+  raw.textContent = text;
+
+  if (activeTab === 'parsed') renderParsedJSON(text);
+  if (activeTab === 'diff')   renderDiff();
+
+  const m = curMeta;
+  if (m) {
+    const el = document.getElementById('meta-row');
+    el.textContent = `Provider: ${m.provider}  |  Model: ${m.model}  |  Tokens: ${m.tokensIn} in / ${m.tokensOut} out  |  Latency: ${(latencyMs/1000).toFixed(2)}s`;
+    el.style.display = 'block';
+  }
+
+  document.getElementById('btn-copy').disabled      = false;
+  document.getElementById('btn-export').disabled    = false;
+  document.getElementById('btn-save-hist').disabled = false;
+}
+
+function renderParsedJSON(text) {
+  const el = document.getElementById('pane-parsed');
+  try {
+    el.innerHTML = syntaxHL(JSON.stringify(JSON.parse(text), null, 2));
+  } catch {
+    el.innerHTML = '<span style="color:var(--error)">\u26a0 Response is not valid JSON</span>\n\n' + esc(text);
+  }
+}
+
+function syntaxHL(json) {
+  return esc(json).replace(
+    /("(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    m => {
+      let c = 'jn';
+      if (/^"/.test(m))           c = /:$/.test(m) ? 'jk' : 'js';
+      else if (/true|false/.test(m)) c = 'jb';
+      else if (/null/.test(m))    c = 'jl';
+      return `<span class="${c}">${m}</span>`;
+    }
+  );
+}
+
+function renderDiff() {
+  document.getElementById('diff-label-a').textContent = prevResponse ? 'Previous' : 'Previous (none)';
+  document.getElementById('diff-label-b').textContent = curResponse  ? 'Current'  : 'Current (none)';
+  document.getElementById('diff-a').textContent = prevResponse || '(no previous response)';
+  document.getElementById('diff-b').textContent = curResponse  || '(no response yet)';
+}
+
+function showError(msg) {
+  const el = document.getElementById('pane-raw');
+  el.className = 'out-view';
+  el.style.color = 'var(--error)';
+  el.textContent = msg;
+  setTimeout(() => el.style.color = '', 4000);
+}
+
+function runSchemaValidation(text, schema) {
+  const banner = document.getElementById('val-banner');
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof Ajv !== 'undefined') {
+      const ajv = new Ajv({ strict: false });
+      const validate = ajv.compile(schema);
+      if (!validate(parsed)) {
+        banner.textContent = '\u26a0 Schema validation failed: ' + ajv.errorsText(validate.errors);
+        banner.style.display = 'block';
+        return;
+      }
+    }
+    banner.style.display = 'none';
+  } catch {
+    banner.textContent = '\u26a0 Response is not valid JSON \u2014 schema validation skipped.';
+    banner.style.display = 'block';
+  }
+}
+
+// ─── OUTPUT ACTIONS ───────────────────────────────────────────────────────────
+
+function doCopy() {
+  if (!curResponse) return;
+  navigator.clipboard.writeText(curResponse).then(() => {
+    const b = document.getElementById('btn-copy');
+    b.textContent = 'Copied!';
+    setTimeout(() => b.textContent = 'Copy', 1500);
+  });
+}
+
+function doExport() {
+  if (!curResponse) return;
+  let content;
+  try { content = JSON.stringify(JSON.parse(curResponse), null, 2); }
+  catch { alert('Response is not valid JSON.'); return; }
+  const blob = new Blob([content], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'llmsb-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function doSaveHistory() {
+  if (!curResponse || !lastReq || !curMeta) return;
+  const entry = {
+    id:             (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)),
+    timestamp:      new Date().toISOString(),
+    provider:       lastReq.provider,
+    model:          curMeta.model || lastReq.model,
+    system_prompt:  lastReq.system,
+    user_message:   lastReq.userMsg,
+    schema:         lastReq.schema,
+    response_raw:   curResponse,
+    response_parsed: tryJSON(curResponse),
+    tokens_in:      curMeta.tokensIn,
+    tokens_out:     curMeta.tokensOut,
+    latency_ms:     curMeta.latencyMs
+  };
+  const hist = getHistory();
+  hist.unshift(entry);
+  localStorage.setItem('llmsb_history', JSON.stringify(hist));
+  renderHistoryList();
+  const b = document.getElementById('btn-save-hist');
+  b.textContent = 'Saved!';
+  setTimeout(() => b.textContent = 'Save to History', 1500);
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────────────────────
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('llmsb_history') || '[]'); }
+  catch { return []; }
+}
+
+function renderHistoryList() {
+  const list = document.getElementById('hist-list');
+  const hist = getHistory();
+  if (!hist.length) {
+    list.innerHTML = '<div class="hist-empty">No history yet. Send a request and click "Save to History".</div>';
+    return;
+  }
+  list.innerHTML = hist.map((e, i) => `
+    <div class="hist-entry" onclick="restoreHistory(${i})">
+      <div class="entry-meta">${e.timestamp} | ${e.provider} / ${e.model} | ${e.tokens_in}in / ${e.tokens_out}out | ${(e.latency_ms/1000).toFixed(2)}s</div>
+      <div class="entry-preview">${esc(e.user_message.slice(0, 120))}</div>
+    </div>
+  `).join('');
+}
+
+function restoreHistory(i) {
+  const e = getHistory()[i];
+  if (!e) return;
+  document.getElementById('system-prompt').value = e.system_prompt || '';
+  document.getElementById('user-message').value  = e.user_message  || '';
+  if (e.schema) document.getElementById('schema-editor').value = JSON.stringify(e.schema, null, 2);
+  setProvider(e.provider);
+  const sel = document.getElementById('model-select');
+  for (const opt of sel.options) { if (opt.value === e.model) { sel.value = e.model; break; } }
+  curResponse = e.response_raw;
+  curMeta = {
+    provider:  e.provider.charAt(0).toUpperCase() + e.provider.slice(1),
+    model:     e.model,
+    tokensIn:  e.tokens_in,
+    tokensOut: e.tokens_out,
+    latencyMs: e.latency_ms
+  };
+  finalizeOutput(e.response_raw, e.latency_ms);
+}
+
+function toggleHistory() {
+  document.getElementById('hist-panel').classList.toggle('hidden');
+}
+
+function clearHistory() {
+  if (!confirm('Clear all session history?')) return;
+  localStorage.removeItem('llmsb_history');
+  renderHistoryList();
+}
+
+// ─── COMPARE BOTH ────────────────────────────────────────────────────────────
+
+let cmpResponses = { a: null, b: null };
+let cmpAbortA = null, cmpAbortB = null;
+let cmpInFlight = false;
+
+async function handleCompare() {
+  if (cmpInFlight) {
+    if (cmpAbortA) cmpAbortA.abort();
+    if (cmpAbortB) cmpAbortB.abort();
+    return;
+  }
+
+  const userMsg = document.getElementById('user-message').value.trim();
+  if (!userMsg) { alert('User message is required.'); return; }
+
+  const keyA = localStorage.getItem('llmsb_anthropic_key');
+  const keyB = localStorage.getItem('llmsb_openai_key');
+  if (!keyA) { alert('Please save an Anthropic API key first.'); return; }
+  if (!keyB) { alert('Please save an OpenAI API key first.'); return; }
+
+  const modelA    = document.getElementById('cmp-model-anthropic').value;
+  const modelB    = document.getElementById('cmp-model-openai').value;
+  const system    = document.getElementById('system-prompt').value.trim();
+  const temp      = parseFloat(document.getElementById('temperature').value);
+  const maxTok    = parseInt(document.getElementById('max-tokens').value);
+  const enforceJson = document.getElementById('enforce-json').checked;
+  const schema    = getParsedSchema();
+  if (enforceJson && !schema) { alert('JSON enforcement is on but schema is empty or invalid.'); return; }
+
+  setCmpInFlight(true);
+  resetComparePanel(modelA, modelB);
+
+  cmpAbortA = new AbortController();
+  cmpAbortB = new AbortController();
+  cmpResponses = { a: null, b: null };
+
+  const shared = { system, userMsg, temperature: temp, maxTokens: maxTok,
+                   stream: false, enforceJson, schema };
+
+  const [resA, resB] = await Promise.allSettled([
+    runCmpSide('a', () => callAnthropicCmp({ ...shared, key: keyA, model: modelA, abort: cmpAbortA })),
+    runCmpSide('b', () => callOpenAICmp(   { ...shared, key: keyB, model: modelB, abort: cmpAbortB }))
+  ]);
+
+  setCmpInFlight(false);
+  cmpAbortA = null; cmpAbortB = null;
+
+  // Enable action buttons
+  if (cmpResponses.a) { document.getElementById('cmp-copy-a').disabled = false; document.getElementById('cmp-export-a').disabled = false; }
+  if (cmpResponses.b) { document.getElementById('cmp-copy-b').disabled = false; document.getElementById('cmp-export-b').disabled = false; }
+}
+
+async function runCmpSide(side, apiFn) {
+  const outEl  = document.getElementById('cmp-out-' + side);
+  const metaEl = document.getElementById('cmp-meta-' + side);
+  outEl.className = 'cmp-out-box ' + (side === 'a' ? 'anthropic-border' : 'openai-border') + ' streaming';
+  outEl.textContent = '';
+  const t0 = Date.now();
+  try {
+    const result = await apiFn();
+    const ms = Date.now() - t0;
+    outEl.className = 'cmp-out-box ' + (side === 'a' ? 'anthropic-border' : 'openai-border');
+    outEl.textContent = result.text;
+    metaEl.textContent = `Model: ${result.meta.model}  |  ${result.meta.tokensIn}in / ${result.meta.tokensOut}out  |  ${(ms/1000).toFixed(2)}s`;
+    cmpResponses[side] = result.text;
+  } catch (e) {
+    outEl.className = 'cmp-out-box ' + (side === 'a' ? 'anthropic-border' : 'openai-border');
+    outEl.style.color = 'var(--error)';
+    outEl.textContent = e.name === 'AbortError' ? '[Cancelled]' : 'Error: ' + e.message;
+    setTimeout(() => outEl.style.color = '', 4000);
+  }
+}
+
+// Thin wrappers that use their own AbortController
+async function callAnthropicCmp(opts) {
+  const saved = abortCtl;
+  abortCtl = opts.abort;
+  const r = await callAnthropic({ key: opts.key, model: opts.model, system: opts.system,
+    userMsg: opts.userMsg, temperature: opts.temperature, maxTokens: opts.maxTokens,
+    stream: false, enforceJson: opts.enforceJson, schema: opts.schema });
+  abortCtl = saved;
+  return r;
+}
+
+async function callOpenAICmp(opts) {
+  const saved = abortCtl;
+  abortCtl = opts.abort;
+  const r = await callOpenAI({ key: opts.key, model: opts.model, system: opts.system,
+    userMsg: opts.userMsg, temperature: opts.temperature, maxTokens: opts.maxTokens,
+    stream: false, enforceJson: opts.enforceJson, schema: opts.schema });
+  abortCtl = saved;
+  return r;
+}
+
+function setCmpInFlight(v) {
+  cmpInFlight = v;
+  const btn = document.getElementById('cmp-btn');
+  btn.textContent = v ? '\u25a0 Cancel' : '\u21c4 Compare Both';
+  btn.classList.toggle('running', v);
+}
+
+function resetComparePanel(modelA, modelB) {
+  document.getElementById('compare-card').style.display = 'block';
+  document.getElementById('cmp-header-a').textContent = 'Anthropic \u2014 ' + modelA;
+  document.getElementById('cmp-header-b').textContent = 'OpenAI \u2014 ' + modelB;
+  ['a','b'].forEach(s => {
+    document.getElementById('cmp-meta-' + s).textContent = '';
+    document.getElementById('cmp-copy-' + s).disabled   = true;
+    document.getElementById('cmp-export-' + s).disabled = true;
+  });
+  document.getElementById('compare-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cmpCopy(side) {
+  const text = cmpResponses[side];
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('cmp-copy-' + side);
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function cmpExport(side) {
+  const text = cmpResponses[side];
+  if (!text) return;
+  let content;
+  try { content = JSON.stringify(JSON.parse(text), null, 2); }
+  catch { alert('Response is not valid JSON.'); return; }
+  const blob = new Blob([content], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'llmsb-' + (side === 'a' ? 'anthropic' : 'openai') + '-' + Date.now() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function tryJSON(s) { try { return JSON.parse(s); } catch { return null; } }
+
+// ─── GO ───────────────────────────────────────────────────────────────────────
+
+init();
+</script>
+</body>
+</html>
