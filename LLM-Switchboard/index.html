@@ -609,6 +609,91 @@
 
     .cmp-actions { display: flex; gap: 8px; margin-top: 12px; }
 
+    /* Chat */
+    .chat-history {
+      min-height: 220px;
+      max-height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px 0 8px;
+      margin-bottom: 12px;
+    }
+
+    .chat-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 13px;
+      margin: auto;
+    }
+
+    .chat-msg {
+      max-width: 82%;
+      padding: 9px 13px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: var(--active);
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: var(--btn-bg);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 3px;
+    }
+
+    .chat-msg.assistant.streaming::after {
+      content: '▋';
+      animation: blink 0.9s step-end infinite;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .chat-input-row textarea {
+      flex: 1;
+      resize: none;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .btn-chat-send {
+      background: var(--active);
+      border: 2px solid var(--active);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .btn-chat-send:hover:not(:disabled) { filter: brightness(1.12); }
+    .btn-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .chat-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -663,14 +748,29 @@
     <p class="key-note">Keys are stored locally and never transmitted to any server other than the provider's API endpoint.</p>
   </div>
 
+  <!-- Chat -->
+  <div class="card">
+    <div class="card-title">Chat</div>
+    <div class="chat-actions">
+      <button class="btn" onclick="clearChat()">Clear conversation</button>
+    </div>
+    <div id="chat-history" class="chat-history">
+      <div class="chat-empty">Type a message below and press Send (or Shift+Enter).</div>
+    </div>
+    <div class="chat-input-row">
+      <textarea id="chat-input" rows="2" placeholder="Ask anything..." onkeydown="chatKeyDown(event)"></textarea>
+      <button class="btn-chat-send" id="chat-send-btn" onclick="handleChat()">&#9654;</button>
+    </div>
+  </div>
+
   <!-- Prompt Composer -->
   <div class="card">
     <div class="card-title">Prompt Composer</div>
     <div class="lib-row">
-      <select id="prompt-select">
-        <option value="">&#8212; Select a preloaded prompt &#8212;</option>
-      </select>
+      <select id="prompt-select"></select>
       <button class="btn" onclick="loadPrompt()">Load</button>
+      <button class="btn" onclick="saveCurrentPrompt()">Save</button>
+      <button class="btn" onclick="deleteSelectedPrompt()">Delete</button>
       <button class="btn" onclick="clearPrompt()">Clear</button>
     </div>
     <div class="field-wrap">
@@ -687,10 +787,10 @@
   <div class="card">
     <div class="card-title">JSON Schema Editor</div>
     <div class="lib-row">
-      <select id="schema-select">
-        <option value="">&#8212; Select a preloaded schema &#8212;</option>
-      </select>
+      <select id="schema-select"></select>
       <button class="btn" onclick="loadSchema()">Load</button>
+      <button class="btn" onclick="saveCurrentSchema()">Save</button>
+      <button class="btn" onclick="deleteSelectedSchema()">Delete</button>
       <button class="btn" onclick="clearSchema()">Clear</button>
     </div>
     <div class="schema-opts">
@@ -1050,14 +1150,30 @@ function buildModelSelect() {
 
 function buildPromptSelect() {
   const sel = document.getElementById('prompt-select');
-  sel.innerHTML = '<option value="">&#8212; Select a preloaded prompt &#8212;</option>' +
-    PROMPTS.map(p => `<option value="${p.id}">${p.id.toUpperCase()}: ${p.name}</option>`).join('');
+  const customs = getCustomPrompts();
+  sel.innerHTML = '<option value="">&#8212; Select a prompt &#8212;</option>' +
+    '<optgroup label="Preloaded">' +
+    PROMPTS.map(p => `<option value="${p.id}">${p.id.toUpperCase()}: ${p.name}</option>`).join('') +
+    '</optgroup>' +
+    (customs.length
+      ? '<optgroup label="Custom">' +
+        customs.map(p => `<option value="${p.id}">\u2605 ${p.name}</option>`).join('') +
+        '</optgroup>'
+      : '');
 }
 
 function buildSchemaSelect() {
   const sel = document.getElementById('schema-select');
-  sel.innerHTML = '<option value="">&#8212; Select a preloaded schema &#8212;</option>' +
-    SCHEMAS.map(s => `<option value="${s.id}">${s.id.toUpperCase()}: ${s.name}</option>`).join('');
+  const customs = getCustomSchemas();
+  sel.innerHTML = '<option value="">&#8212; Select a schema &#8212;</option>' +
+    '<optgroup label="Preloaded">' +
+    SCHEMAS.map(s => `<option value="${s.id}">${s.id.toUpperCase()}: ${s.name}</option>`).join('') +
+    '</optgroup>' +
+    (customs.length
+      ? '<optgroup label="Custom">' +
+        customs.map(s => `<option value="${s.id}">\u2605 ${s.name}</option>`).join('') +
+        '</optgroup>'
+      : '');
 }
 
 // ─── PROVIDER ─────────────────────────────────────────────────────────────────
@@ -1122,7 +1238,7 @@ async function pingKey(p, key) {
 function loadPrompt() {
   const id = document.getElementById('prompt-select').value;
   if (!id) return;
-  const p = PROMPTS.find(x => x.id === id);
+  const p = PROMPTS.find(x => x.id === id) || getCustomPrompts().find(x => x.id === id);
   if (!p) return;
   document.getElementById('system-prompt').value = p.system;
   document.getElementById('user-message').value = p.user;
@@ -1139,7 +1255,7 @@ function clearPrompt() {
 function loadSchema() {
   const id = document.getElementById('schema-select').value;
   if (!id) return;
-  const s = SCHEMAS.find(x => x.id === id);
+  const s = SCHEMAS.find(x => x.id === id) || getCustomSchemas().find(x => x.id === id);
   if (!s) return;
   document.getElementById('schema-editor').value = JSON.stringify(s.schema, null, 2);
   liveValidateSchema();
@@ -1163,6 +1279,225 @@ function getParsedSchema() {
   const val = document.getElementById('schema-editor').value.trim();
   if (!val) return null;
   try { return JSON.parse(val); } catch { return null; }
+}
+
+// ─── CHAT ─────────────────────────────────────────────────────────────────────
+
+let chatMessages = []; // multi-turn: [{role, content}]
+let chatBusy = false;
+
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChat(); }
+}
+
+function clearChat() {
+  chatMessages = [];
+  const h = document.getElementById('chat-history');
+  h.innerHTML = '<div class="chat-empty">Type a message below and press Send (or Shift+Enter).</div>';
+}
+
+async function handleChat() {
+  if (chatBusy) return;
+  const input = document.getElementById('chat-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  const key = localStorage.getItem('llmsb_' + provider + '_key');
+  if (!key) { alert('Please save an API key for ' + provider.charAt(0).toUpperCase() + provider.slice(1) + ' first (API Key Vault section below).'); return; }
+
+  const model  = document.getElementById('model-select').value;
+  const system = document.getElementById('system-prompt').value.trim();
+
+  // Show user bubble, clear input
+  chatMessages.push({ role: 'user', content: msg });
+  appendChatBubble('user', msg);
+  input.value = '';
+
+  // Placeholder assistant bubble (streaming into it)
+  const bubble = appendChatBubble('assistant', '');
+  bubble.classList.add('streaming');
+
+  chatBusy = true;
+  document.getElementById('chat-send-btn').disabled = true;
+
+  try {
+    let fullText = '';
+    const onChunk = chunk => {
+      fullText += chunk;
+      bubble.textContent = fullText;
+      bubble.parentElement.scrollTop = bubble.parentElement.scrollHeight;
+    };
+
+    if (provider === 'anthropic') {
+      await chatAnthropic({ key, model, system, messages: chatMessages, onChunk });
+    } else {
+      await chatOpenAI({ key, model, system, messages: chatMessages, onChunk });
+    }
+
+    bubble.classList.remove('streaming');
+    chatMessages.push({ role: 'assistant', content: fullText });
+  } catch (e) {
+    bubble.classList.remove('streaming');
+    bubble.style.color = 'var(--error)';
+    bubble.textContent = 'Error: ' + e.message;
+  } finally {
+    chatBusy = false;
+    document.getElementById('chat-send-btn').disabled = false;
+    input.focus();
+  }
+}
+
+function appendChatBubble(role, text) {
+  const h = document.getElementById('chat-history');
+  const empty = h.querySelector('.chat-empty');
+  if (empty) empty.remove();
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + role;
+  el.textContent = text;
+  h.appendChild(el);
+  h.scrollTop = h.scrollHeight;
+  return el;
+}
+
+async function chatAnthropic({ key, model, system, messages, onChunk }) {
+  const maxTokens  = parseInt(document.getElementById('max-tokens').value)  || 1024;
+  const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+  const body = { model, max_tokens: maxTokens, temperature, messages, stream: true };
+  if (system) body.system = system;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || res.statusText); }
+
+  const reader = res.body.getReader(), decoder = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n'); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const s = line.slice(6).trim(); if (!s) continue;
+      let ev; try { ev = JSON.parse(s); } catch { continue; }
+      if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') onChunk(ev.delta.text);
+    }
+  }
+}
+
+async function chatOpenAI({ key, model, system, messages, onChunk }) {
+  const maxTokens   = parseInt(document.getElementById('max-tokens').value)   || 1024;
+  const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+  const isReasoning = ['o3', 'o4-mini', 'o1', 'o1-mini', 'o1-preview'].includes(model);
+
+  const apiMessages = [];
+  if (system) apiMessages.push({ role: 'system', content: system });
+  apiMessages.push(...messages);
+
+  const body = { model, messages: apiMessages };
+  if (isReasoning) { body.max_completion_tokens = maxTokens; }
+  else             { body.temperature = temperature; body.max_tokens = maxTokens; body.stream = true; }
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || res.statusText); }
+
+  if (isReasoning) {
+    const data = await res.json();
+    onChunk(data.choices?.[0]?.message?.content || '');
+    return;
+  }
+
+  const reader = res.body.getReader(), decoder = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n'); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const s = line.slice(6).trim(); if (!s || s === '[DONE]') continue;
+      let ev; try { ev = JSON.parse(s); } catch { continue; }
+      const delta = ev.choices?.[0]?.delta?.content;
+      if (delta) onChunk(delta);
+    }
+  }
+}
+
+// ─── CUSTOM PROMPT LIBRARY ────────────────────────────────────────────────────
+
+function getCustomPrompts() {
+  try { return JSON.parse(localStorage.getItem('llmsb_custom_prompts') || '[]'); } catch { return []; }
+}
+
+function saveCurrentPrompt() {
+  const system = document.getElementById('system-prompt').value.trim();
+  const user   = document.getElementById('user-message').value.trim();
+  if (!system && !user) { alert('Both fields are empty — nothing to save.'); return; }
+  const name = prompt('Name this prompt:');
+  if (!name) return;
+  const customs = getCustomPrompts();
+  const id = 'cp' + Date.now();
+  customs.push({ id, name, system, user });
+  localStorage.setItem('llmsb_custom_prompts', JSON.stringify(customs));
+  buildPromptSelect();
+  document.getElementById('prompt-select').value = id;
+}
+
+function deleteSelectedPrompt() {
+  const id = document.getElementById('prompt-select').value;
+  if (!id) { alert('No prompt selected.'); return; }
+  const customs = getCustomPrompts();
+  const idx = customs.findIndex(p => p.id === id);
+  if (idx === -1) { alert('Only custom prompts can be deleted.'); return; }
+  if (!confirm('Delete prompt "' + customs[idx].name + '"?')) return;
+  customs.splice(idx, 1);
+  localStorage.setItem('llmsb_custom_prompts', JSON.stringify(customs));
+  buildPromptSelect();
+}
+
+// ─── CUSTOM SCHEMA LIBRARY ────────────────────────────────────────────────────
+
+function getCustomSchemas() {
+  try { return JSON.parse(localStorage.getItem('llmsb_custom_schemas') || '[]'); } catch { return []; }
+}
+
+function saveCurrentSchema() {
+  const val = document.getElementById('schema-editor').value.trim();
+  if (!val) { alert('Schema is empty.'); return; }
+  if (!liveValidateSchema()) { alert('Fix JSON errors before saving.'); return; }
+  const name = prompt('Name this schema:');
+  if (!name) return;
+  const customs = getCustomSchemas();
+  const id = 'cs' + Date.now();
+  customs.push({ id, name, schema: JSON.parse(val) });
+  localStorage.setItem('llmsb_custom_schemas', JSON.stringify(customs));
+  buildSchemaSelect();
+  document.getElementById('schema-select').value = id;
+}
+
+function deleteSelectedSchema() {
+  const id = document.getElementById('schema-select').value;
+  if (!id) { alert('No schema selected.'); return; }
+  const customs = getCustomSchemas();
+  const idx = customs.findIndex(s => s.id === id);
+  if (idx === -1) { alert('Only custom schemas can be deleted.'); return; }
+  if (!confirm('Delete schema "' + customs[idx].name + '"?')) return;
+  customs.splice(idx, 1);
+  localStorage.setItem('llmsb_custom_schemas', JSON.stringify(customs));
+  buildSchemaSelect();
 }
 
 // ─── SEND / CANCEL ────────────────────────────────────────────────────────────
@@ -1331,14 +1666,24 @@ async function callOpenAI({ key, model, system, userMsg, temperature, maxTokens,
   if (system) messages.push({ role: 'system', content: system });
   messages.push({ role: 'user', content: userMsg });
 
-  const body = { model, messages, temperature, max_tokens: maxTokens };
+  // Reasoning models (o-series) don't accept temperature and use max_completion_tokens
+  const isReasoning = ['o3', 'o4-mini', 'o1', 'o1-mini', 'o1-preview'].includes(model);
+  const body = { model, messages };
+  if (isReasoning) {
+    body.max_completion_tokens = maxTokens;
+  } else {
+    body.temperature = temperature;
+    body.max_tokens  = maxTokens;
+  }
   if (enforceJson && schema) {
     body.response_format = {
       type: 'json_schema',
       json_schema: { name: schema.title || 'output', strict: true, schema }
     };
   }
-  if (stream) body.stream = true;
+  // Reasoning models don't support streaming
+  const doStream = stream && !isReasoning;
+  if (doStream) body.stream = true;
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -1355,7 +1700,7 @@ async function callOpenAI({ key, model, system, userMsg, temperature, maxTokens,
     throw new Error(err.error?.message || res.statusText);
   }
 
-  if (stream) return streamOpenAI(res, model);
+  if (doStream) return streamOpenAI(res, model);
   const data = await res.json();
   return parseOpenAI(data);
 }
