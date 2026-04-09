@@ -33,6 +33,16 @@
         </svg>
         <span class="logo-text">Drug<span class="logo-accent">Safe</span></span>
       </button>
+      <div class="header-tabs" role="tablist" aria-label="Tool mode">
+        <button class="header-tab active" id="tab-interaction" role="tab" aria-selected="true" aria-controls="search-screen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Interactions
+        </button>
+        <button class="header-tab" id="tab-single" role="tab" aria-selected="false" aria-controls="single-drug-screen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          Drug Profile
+        </button>
+      </div>
       <div class="header-actions">
         <button id="how-it-works-btn" class="btn-ghost">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
@@ -99,6 +109,56 @@
         <div id="results-header-container"></div>
         <div id="results-panels-container" class="results-panels"></div>
         <div id="developer-panel-container"></div>
+      </div>
+    </section>
+
+    <!-- Single Drug Search Screen -->
+    <section id="single-drug-screen" class="screen" aria-label="Single drug profile lookup">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-pulse"></span>
+          Adverse Effects &amp; Recalls
+        </div>
+        <h1 class="hero-title">
+          Single Drug
+          <span class="title-gradient">Profile</span>
+        </h1>
+        <p class="hero-subtitle">
+          Look up adverse effects, FAERS reports, and FDA recalls for any single drug
+        </p>
+
+        <div id="single-drug-form-container"></div>
+
+        <div class="popular-checks">
+          <span class="popular-label">Try:</span>
+          <button class="popular-single-btn" data-drug="warfarin">Warfarin</button>
+          <button class="popular-single-btn" data-drug="metformin">Metformin</button>
+          <button class="popular-single-btn" data-drug="lisinopril">Lisinopril</button>
+          <button class="popular-single-btn" data-drug="atorvastatin">Atorvastatin</button>
+        </div>
+
+        <div class="trust-badges">
+          <div class="trust-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            FAERS adverse events
+          </div>
+          <div class="trust-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            FDA label data
+          </div>
+          <div class="trust-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            Recall status
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Single Drug Results Screen -->
+    <section id="single-drug-results-screen" class="screen" aria-label="Single drug profile results" aria-live="polite">
+      <div class="results-container">
+        <div id="single-results-header-container"></div>
+        <div id="single-results-panels-container" class="results-panels"></div>
       </div>
     </section>
 

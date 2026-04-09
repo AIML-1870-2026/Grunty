@@ -9,7 +9,7 @@ import { AccordionPanel }  from './components/AccordionPanel.js';
 import { DeveloperPanel }  from './components/DeveloperPanel.js';
 import { renderReactionsChart, renderOutcomesDonut, renderTimeSeriesChart, renderSingleDrugBar, renderComparisonBar } from './components/FaersCharts.js';
 
-import { resolveRxCui }    from './api/rxnorm.js';
+import { resolveRxCui, getDrugSuggestions } from './api/rxnorm.js';
 import { getDrugProfile }  from './api/rxnorm.js';
 import { getDDinterInteraction } from './api/ddinter.js';
 import { getDrugLabel, getFaersReactions, getFaersSerious, getFaersTimeSeries, getDrugRecalls, getSingleDrugAdverseEvents, getApiKey, setApiKey, getUsage } from './api/openfda.js';
@@ -631,6 +631,254 @@ function _stars(num) {
 }
 
 /* ============================================================
+   Single Drug — panel renderers
+   ============================================================ */
+
+async function renderSingleAdversePanel(panel, label, faers, drugName) {
+  const body = panel.bodyEl;
+  const COLOR = '96,165,250';
+  let hasData = false;
+
+  function parseLabelReactions(text) {
+    if (!text) return [];
+    return text
+      .replace(/\([^)]*\)/g, '')
+      .split(/[;,\n•·\-–]+/)
+      .map(s => s.replace(/\s+/g, ' ').trim())
+      .filter(s => s.length > 3 && s.length < 80 && !/^\d+/.test(s))
+      .slice(0, 24);
+  }
+
+  const labelRx = label?.adverseReactions ? parseLabelReactions(label.adverseReactions) : [];
+  const faersRx = faers?.reactions || [];
+
+  if (labelRx.length) {
+    hasData = true;
+    const sub = document.createElement('div');
+    sub.className = 'adverse-subsection';
+    sub.innerHTML = `
+      <div class="adverse-subsection-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        FDA Label — Known Adverse Reactions
+        ${faers?.total ? `<span class="source-badge faers">FAERS · ${formatNumber(faers.total)} reports</span>` : ''}
+      </div>
+      <div class="adverse-reactions-list">
+        ${labelRx.map(r => `<span class="adverse-reaction-pill">${_esc(r)}</span>`).join('')}
+      </div>
+    `;
+    body.appendChild(sub);
+  }
+
+  if (faersRx.length) {
+    hasData = true;
+    const sub = document.createElement('div');
+    sub.className = 'adverse-subsection';
+    sub.innerHTML = `
+      <div class="adverse-subsection-title" style="margin-top:${labelRx.length ? '18px' : '0'}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        FAERS — Top Reported Reactions
+      </div>
+    `;
+    body.appendChild(sub);
+    await renderSingleDrugBar(sub, faersRx, drugName, COLOR);
+  }
+
+  if (!hasData) {
+    panel.setUnavailable(`No adverse effect data found for <strong>${_esc(drugName)}</strong> in FDA labels or FAERS.`);
+    return;
+  }
+
+  const note = document.createElement('p');
+  note.className = 'panel-text';
+  note.style.cssText = 'margin-top:18px; font-size:.75rem; border-top:1px solid var(--color-border); padding-top:12px;';
+  note.innerHTML = `<strong>Sources:</strong> FDA Label adverse reactions section &amp; FAERS individual drug reports.`;
+  body.appendChild(note);
+}
+
+function renderSingleRecallsPanel(panel, recalls, drugName) {
+  const all = recalls?.recalls || [];
+
+  if (!all.length) {
+    panel.setContent(`
+      <div class="panel-section">
+        <div class="recall-safe-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>
+          </svg>
+          No active FDA recalls found for ${_esc(drugName)}
+        </div>
+      </div>`);
+    return;
+  }
+
+  const items = all.map(r => {
+    const cls = r.classification === 'Class I' ? 'class-i'
+               : r.classification === 'Class II' ? 'class-ii' : 'class-iii';
+    return `
+      <div class="recall-item">
+        <span class="recall-class ${cls}">${_esc(r.classification || 'Class Unknown')}</span>
+        <p class="panel-text"><strong>${_esc(r.recalling_firm || 'Unknown firm')}</strong></p>
+        <p class="panel-text" style="margin-top:4px">${_esc(truncate(r.reason_for_recall, 240))}</p>
+        ${r.recall_initiation_date ? `<p class="panel-text" style="margin-top:4px;font-size:.75rem">Initiated: ${formatFdaDate(r.recall_initiation_date)}</p>` : ''}
+      </div>`;
+  }).join('');
+
+  panel.setContent(`<div class="panel-section">${items}</div>`);
+}
+
+function renderSingleLabelPanel(panel, label, drugName) {
+  if (!label) {
+    panel.setUnavailable(`No FDA label data found for <strong>${_esc(drugName)}</strong>.`);
+    return;
+  }
+
+  const parts = [];
+  if (label.adverseReactions) {
+    parts.push(`
+      <div class="panel-section-title">${_esc(label.genericName || drugName)} — Adverse Reactions</div>
+      <div class="label-excerpt">${_esc(truncate(label.adverseReactions, 600))}</div>`);
+  }
+  if (label.warnings) {
+    parts.push(`
+      <div class="panel-section-title" style="margin-top:12px">Warnings &amp; Precautions</div>
+      <div class="label-excerpt">${_esc(truncate(label.warnings, 400))}</div>`);
+  }
+  if (label.contraindications) {
+    parts.push(`
+      <div class="panel-section-title" style="margin-top:12px">Contraindications</div>
+      <div class="label-excerpt">${_esc(truncate(label.contraindications, 400))}</div>`);
+  }
+  if (label.interactions) {
+    parts.push(`
+      <div class="panel-section-title" style="margin-top:12px">Drug Interactions</div>
+      <div class="label-excerpt">${_esc(truncate(label.interactions, 400))}</div>`);
+  }
+
+  if (!parts.length) {
+    panel.setUnavailable(`No detailed label sections found for <strong>${_esc(drugName)}</strong>.`);
+    return;
+  }
+
+  panel.setContent(`
+    <div class="panel-section">
+      ${parts.join('')}
+      ${label.effectiveTime ? `<p class="panel-text" style="margin-top:8px;font-size:.75rem">Label effective: ${formatFdaDate(label.effectiveTime)}</p>` : ''}
+      ${label.labelUrl ? `<a href="${label.labelUrl}" target="_blank" rel="noopener" class="external-link">View full FDA label on DailyMed <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
+    </div>`);
+}
+
+function renderSingleProfilePanel(panel, profile, drugName) {
+  if (!profile) {
+    panel.setUnavailable(`No RxNorm profile data found for <strong>${_esc(drugName)}</strong>.`);
+    return;
+  }
+
+  panel.setContent(`
+    <div class="panel-section">
+      <div class="drug-profiles-grid" style="grid-template-columns:1fr">
+        <div class="drug-profile-card">
+          <div class="profile-drug-name">${_esc(profile.name || drugName)}</div>
+          <div class="profile-row"><div class="profile-key">RxCUI</div><div class="profile-val"><span class="rxcui-code">${_esc(String(profile.rxcui || '–'))}</span></div></div>
+          ${profile.drugClass ? `<div class="profile-row"><div class="profile-key">Drug Class</div><div class="profile-val">${_esc(profile.drugClass)}</div></div>` : ''}
+          ${profile.ingredients?.length ? `<div class="profile-row"><div class="profile-key">Active Ingredient(s)</div><div class="profile-val">${profile.ingredients.map(i => _esc(i)).join(', ')}</div></div>` : ''}
+          ${profile.brandNames?.length ? `<div class="profile-row"><div class="profile-key">Brand Names</div><div class="profile-val">${profile.brandNames.map(b => _esc(b)).join(', ')}</div></div>` : ''}
+          ${profile.forms?.length ? `<div class="profile-row"><div class="profile-key">Dosage Forms</div><div class="profile-val">${profile.forms.map(f => _esc(f)).join(', ')}</div></div>` : ''}
+        </div>
+      </div>
+    </div>`);
+}
+
+/* ============================================================
+   Single Drug — main orchestration
+   ============================================================ */
+async function runSingleDrugLookup(raw, panelsContainer) {
+  panelsContainer.innerHTML = '';
+  const displayName = titleCase(raw.name);
+
+  // Render header inline
+  const headerEl = document.getElementById('single-results-header-container');
+  headerEl.innerHTML = `
+    <div class="single-drug-result-header">
+      <button class="results-back-btn" id="single-back-btn" aria-label="Back to Drug Profile search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back
+      </button>
+      <div class="single-drug-title-block">
+        <div class="single-drug-badge">Drug Profile</div>
+        <h2 class="single-drug-name">${_esc(displayName)}</h2>
+        <p class="single-drug-subtitle">Adverse effects, FAERS reports &amp; FDA recalls</p>
+      </div>
+    </div>`;
+
+  document.getElementById('single-back-btn').addEventListener('click', () => {
+    showScreen('single-drug-screen');
+    document.getElementById('disclaimer-banner').classList.add('hidden');
+  });
+
+  // Create panels
+  const adversePanel = new AccordionPanel(panelsContainer, {
+    id: 'sd-adverse', index: 0, openByDefault: true,
+    title: 'Adverse Effects',
+    subtitle: 'FDA label reactions &amp; FAERS reports',
+    iconColorClass: 'red',
+    iconHtml: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M8.56 2.9A7 7 0 0 1 19 9v4"/><path d="M19 19a7 7 0 0 1-13.86-2"/><path d="m3 3 18 18"/></svg>`,
+  });
+
+  const recallPanel = new AccordionPanel(panelsContainer, {
+    id: 'sd-recalls', index: 1,
+    title: 'FDA Recalls &amp; Enforcement',
+    subtitle: 'Active recall status',
+    iconColorClass: 'amber',
+    iconHtml: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  });
+
+  const labelPanel = new AccordionPanel(panelsContainer, {
+    id: 'sd-label', index: 2,
+    title: 'FDA Drug Label',
+    subtitle: 'Warnings, contraindications &amp; interaction text',
+    iconColorClass: 'amber',
+    iconHtml: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  });
+
+  const profilePanel = new AccordionPanel(panelsContainer, {
+    id: 'sd-profile', index: 3,
+    title: 'Drug Profile — RxNorm',
+    subtitle: 'RxCUI, drug class, dosage forms, ingredients',
+    iconColorClass: 'green',
+    iconHtml: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
+  });
+
+  // Resolve RxCUI
+  let rxcui = raw.rxcui;
+  let resolved = raw.name;
+  if (!rxcui) {
+    const r = await resolveRxCui(raw.name);
+    if (r) { rxcui = r.rxcui; resolved = r.name; }
+  }
+
+  // Fetch all data in parallel
+  const [label, faers, recalls, profile] = await Promise.allSettled([
+    getDrugLabel(resolved),
+    getSingleDrugAdverseEvents(resolved),
+    getDrugRecalls(resolved),
+    rxcui ? getDrugProfile(rxcui, resolved) : Promise.resolve(null),
+  ]);
+
+  const v = r => r.status === 'fulfilled' ? r.value : null;
+
+  await renderSingleAdversePanel(adversePanel, v(label), v(faers), displayName);
+  renderSingleRecallsPanel(recallPanel, v(recalls), displayName);
+  renderSingleLabelPanel(labelPanel, v(label), displayName);
+  renderSingleProfilePanel(profilePanel, v(profile), displayName);
+
+  updateUsageDisplay();
+}
+
+/* ============================================================
    App bootstrap
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -682,12 +930,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* --- Logo home button --- */
-  document.getElementById('logo-home-btn').addEventListener('click', () => {
-    showScreen('search-screen');
-    document.getElementById('disclaimer-banner').classList.add('hidden');
-  });
-
   /* --- How It Works modal --- */
   document.getElementById('how-it-works-btn').addEventListener('click', () => openModal('how-it-works-modal'));
   document.getElementById('close-hiw-modal').addEventListener('click', () => closeModal('how-it-works-modal'));
@@ -726,6 +968,174 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal('how-it-works-modal');
       closeModal('settings-modal');
     }
+  });
+
+  /* --- Header tabs --- */
+  const tabInteraction = document.getElementById('tab-interaction');
+  const tabSingle      = document.getElementById('tab-single');
+
+  function setActiveTab(which) {
+    tabInteraction.classList.toggle('active', which === 'interaction');
+    tabInteraction.setAttribute('aria-selected', which === 'interaction');
+    tabSingle.classList.toggle('active', which === 'single');
+    tabSingle.setAttribute('aria-selected', which === 'single');
+  }
+
+  tabInteraction.addEventListener('click', () => {
+    setActiveTab('interaction');
+    showScreen('search-screen');
+    document.getElementById('disclaimer-banner').classList.add('hidden');
+  });
+
+  tabSingle.addEventListener('click', () => {
+    setActiveTab('single');
+    showScreen('single-drug-screen');
+    document.getElementById('disclaimer-banner').classList.add('hidden');
+  });
+
+  /* --- Logo home button --- */
+  document.getElementById('logo-home-btn').addEventListener('click', () => {
+    setActiveTab('interaction');
+    showScreen('search-screen');
+    document.getElementById('disclaimer-banner').classList.add('hidden');
+  });
+
+  /* --- Single Drug Form --- */
+  const singleFormContainer = document.getElementById('single-drug-form-container');
+  const singlePanelsContainer = document.getElementById('single-results-panels-container');
+
+  function buildSingleDrugForm() {
+    singleFormContainer.innerHTML = `
+      <form class="search-form single-search-form" id="single-drug-search-form" novalidate>
+        <div class="drug-inputs-row single-input-row">
+          <div class="drug-input-wrap" id="single-wrap">
+            <label class="drug-input-label" for="single-drug-input">Drug Name</label>
+            <svg class="drug-input-icon has-label" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </svg>
+            <input
+              type="text"
+              id="single-drug-input"
+              class="drug-input"
+              placeholder="e.g. Warfarin, Atorvastatin…"
+              autocomplete="off"
+              spellcheck="false"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="single-dropdown"
+              role="combobox"
+            >
+            <div id="single-dropdown" class="autocomplete-dropdown" role="listbox" aria-label="Drug suggestions" style="display:none"></div>
+            <div class="input-error" id="single-error"></div>
+          </div>
+        </div>
+        <div class="search-form-actions">
+          <button type="submit" class="btn-primary" id="single-check-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18" aria-hidden="true">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </svg>
+            Look Up Drug
+          </button>
+        </div>
+      </form>`;
+
+    let selectedDrug = { name: '', rxcui: null };
+    let debounceTimer = null;
+    const input    = singleFormContainer.querySelector('#single-drug-input');
+    const dropdown = singleFormContainer.querySelector('#single-dropdown');
+    const errorEl  = singleFormContainer.querySelector('#single-error');
+    const form     = singleFormContainer.querySelector('#single-drug-search-form');
+
+    function closeDropdown() {
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      input.setAttribute('aria-expanded', 'false');
+    }
+
+    function showItems(items) {
+      if (!items.length) {
+        dropdown.innerHTML = `<div class="autocomplete-empty">No matches found. Try a different spelling.</div>`;
+        dropdown.style.display = 'block';
+        return;
+      }
+      const val = input.value.trim();
+      dropdown.innerHTML = items.map(item => `
+        <div class="autocomplete-item" role="option" aria-selected="false"
+          data-name="${String(item.name).replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
+          data-rxcui="${item.rxcui}" tabindex="-1">
+          <span class="autocomplete-name">${String(item.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>
+          <span class="autocomplete-rxcui">RxCUI: ${item.rxcui}${item.tty ? ' · ' + item.tty : ''}</span>
+        </div>`).join('');
+      dropdown.style.display = 'block';
+      input.setAttribute('aria-expanded', 'true');
+      dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedDrug = { name: el.dataset.name, rxcui: el.dataset.rxcui };
+          input.value = el.dataset.name;
+          input.classList.add('has-value');
+          closeDropdown();
+        });
+      });
+    }
+
+    input.addEventListener('input', () => {
+      const val = input.value.trim();
+      selectedDrug = { name: val, rxcui: null };
+      input.classList.toggle('has-value', val.length > 0);
+      errorEl.classList.remove('visible');
+      clearTimeout(debounceTimer);
+      if (val.length < 2) { closeDropdown(); return; }
+      debounceTimer = setTimeout(async () => {
+        dropdown.innerHTML = `<div class="autocomplete-loading"><div class="skeleton skeleton-line w-full" style="height:10px"></div></div>`;
+        dropdown.style.display = 'block';
+        const suggestions = await getDrugSuggestions(val);
+        if (input.value.trim() !== val) return;
+        showItems(suggestions);
+      }, 320);
+    });
+
+    input.addEventListener('keydown', e => {
+      if (dropdown.style.display === 'none') return;
+      const items = dropdown.querySelectorAll('.autocomplete-item');
+      const current = dropdown.querySelector('[aria-selected="true"]');
+      let idx = [...items].indexOf(current);
+      if (e.key === 'ArrowDown') { e.preventDefault(); idx = (idx+1)%items.length; items.forEach((it,i) => it.setAttribute('aria-selected', i===idx)); items[idx]?.scrollIntoView({block:'nearest'}); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); idx = (idx-1+items.length)%items.length; items.forEach((it,i) => it.setAttribute('aria-selected', i===idx)); items[idx]?.scrollIntoView({block:'nearest'}); }
+      else if (e.key === 'Enter' && current) { e.preventDefault(); current.click(); }
+      else if (e.key === 'Escape') closeDropdown();
+    });
+
+    input.addEventListener('blur', () => setTimeout(closeDropdown, 200));
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = input.value.trim();
+      if (!name) { errorEl.textContent = 'Please enter a drug name.'; errorEl.classList.add('visible'); return; }
+      const drug = selectedDrug.name === name ? selectedDrug : { name, rxcui: null };
+      showScreen('single-drug-results-screen');
+      document.getElementById('disclaimer-banner').classList.remove('hidden');
+      runSingleDrugLookup(drug, singlePanelsContainer).catch(err => {
+        console.error(err);
+        showToast('An unexpected error occurred. Please try again.', 'error');
+      });
+    });
+
+    // expose a prefill+submit helper
+    singleFormContainer._prefillAndSubmit = (drugName) => {
+      input.value = drugName;
+      input.classList.add('has-value');
+      selectedDrug = { name: drugName, rxcui: null };
+      form.dispatchEvent(new Event('submit'));
+    };
+  }
+
+  buildSingleDrugForm();
+
+  /* --- Popular single-drug buttons --- */
+  document.querySelectorAll('.popular-single-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      singleFormContainer._prefillAndSubmit(btn.dataset.drug);
+    });
   });
 
   /* --- Offline detection --- */
