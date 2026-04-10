@@ -47,7 +47,10 @@ app.get('/api/products/:id', (req, res) => {
 
 // POST /api/review
 app.post('/api/review', async (req, res) => {
-  const { productId, sentimentScore, reviewerPersona = 'casual', wordCount = 120 } = req.body;
+  const {
+    productId, sentimentScore, reviewerPersona = 'casual', wordCount = 120,
+    apiKey, provider, model,
+  } = req.body;
 
   if (productId === undefined || sentimentScore === undefined) {
     return res.status(400).json({ error: 'productId and sentimentScore are required' });
@@ -57,8 +60,20 @@ app.post('/api/review', async (req, res) => {
   const product = products.find(p => p.id === productId);
   if (!product) return res.status(404).json({ error: 'Product not found' });
 
+  // Allow client to pass credentials; fall back to .env
+  const resolvedKey = apiKey || process.env.SWITCHBOARD_API_KEY;
+  const resolvedProvider = provider || process.env.SWITCHBOARD_PROVIDER || 'anthropic';
+  const resolvedModel = model || process.env.SWITCHBOARD_MODEL;
+
+  if (!resolvedKey) {
+    return res.status(400).json({ error: 'No API key provided. Enter one in Settings or set SWITCHBOARD_API_KEY in .env.' });
+  }
+
   try {
-    const result = await generateReview({ product, sentimentScore, persona: reviewerPersona, wordCount });
+    const result = await generateReview({
+      product, sentimentScore, persona: reviewerPersona, wordCount,
+      apiKey: resolvedKey, provider: resolvedProvider, model: resolvedModel,
+    });
     res.json({
       productName: product.name,
       sentimentScore,
@@ -70,11 +85,13 @@ app.post('/api/review', async (req, res) => {
       generatedAt: new Date().toISOString()
     });
   } catch (err) {
-    console.error('[error]', err.message);
+    const detail = err.response?.data || err.message;
+    console.error('[error]', detail);
     if (err.response?.status === 504 || err.code === 'ECONNABORTED') {
       return res.status(504).json({ error: 'Request timed out. Try again.' });
     }
-    res.status(502).json({ error: 'Review generation failed — check your Switchboard connection.' });
+    const msg = err.response?.data?.error?.message || err.message || 'Unknown error';
+    res.status(502).json({ error: msg });
   }
 });
 

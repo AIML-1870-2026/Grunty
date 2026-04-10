@@ -357,69 +357,18 @@ Write a review matching the above sentiment exactly. The tone, word choice, and 
 }
 
 // ─────────────────────────────────────────────────────
-// API calls
+// API call — routed through Express server (avoids CORS)
 // ─────────────────────────────────────────────────────
-async function callAnthropic({ key, model, systemPrompt, userPrompt }) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callReviewAPI({ productId, sentimentScore, persona, wordCount, apiKey, provider, model }) {
+  const res = await fetch('/api/review', {
     method: 'POST',
-    headers: {
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1024,
-      temperature: 0.85,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ productId, sentimentScore, reviewerPersona: persona, wordCount, apiKey, provider, model }),
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
-  }
-
   const data = await res.json();
-  return data.content?.[0]?.text || '';
-}
-
-async function callOpenAI({ key, model, systemPrompt, userPrompt }) {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.85,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `OpenAI API error ${res.status}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
-}
-
-function parseReviewJSON(raw) {
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    throw new Error('The AI returned malformed JSON. Try again.');
-  }
+  if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+  return data;
 }
 
 // ─────────────────────────────────────────────────────
@@ -428,10 +377,9 @@ function parseReviewJSON(raw) {
 async function generateReview() {
   if (!state.selectedProduct || state.isGenerating) return;
 
-  const provider = document.getElementById('provider-select').value;
-  const model = document.getElementById('model-select').value;
   const key = document.getElementById('api-key-input').value.trim()
-    || localStorage.getItem(`apikey_${provider}`) || '';
+    || localStorage.getItem(`apikey_anthropic`)
+    || localStorage.getItem(`apikey_openai`) || '';
 
   if (!key) {
     showToast('Please enter an API key in Settings ⚙️', 'error');
@@ -439,68 +387,57 @@ async function generateReview() {
     return;
   }
 
+  // Auto-detect provider from key prefix
+  const detectedProvider = key.startsWith('sk-ant-') ? 'anthropic' : 'openai';
+  const provider = detectedProvider;
+
+  // Auto-select a sensible default model for the detected provider
+  const savedModel = localStorage.getItem(`model_${provider}`);
+  const defaultModel = provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4o-mini';
+  const model = savedModel || defaultModel;
+
+  // Sync the UI to match
+  document.getElementById('provider-select').value = provider;
+  populateModels(provider);
+  document.getElementById('model-select').value = model;
+
   saveSettings();
 
   state.isGenerating = true;
   setGeneratingUI(true);
 
   const sentimentLabel = toSentimentLabel(state.sentimentScore);
-  const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt(
-    state.selectedProduct,
-    sentimentLabel,
-    state.sentimentScore,
-    state.persona,
-    state.wordCount
-  );
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-  let raw = '';
   try {
-    if (provider === 'anthropic') {
-      raw = await callAnthropic({ key, model, systemPrompt, userPrompt });
-    } else {
-      raw = await callOpenAI({ key, model, systemPrompt, userPrompt });
-    }
+    const data = await callReviewAPI({
+      productId: state.selectedProduct.id,
+      sentimentScore: state.sentimentScore,
+      persona: state.persona,
+      wordCount: state.wordCount,
+      apiKey: key,
+      provider,
+      model,
+    });
 
-    let parsed;
-    try {
-      parsed = parseReviewJSON(raw);
-    } catch {
-      // Retry once
-      if (provider === 'anthropic') {
-        raw = await callAnthropic({ key, model, systemPrompt, userPrompt });
-      } else {
-        raw = await callOpenAI({ key, model, systemPrompt, userPrompt });
-      }
-      parsed = parseReviewJSON(raw);
-    }
-
-    clearTimeout(timeoutId);
-    const stars = toStarRating(state.sentimentScore);
     const review = {
-      ...parsed,
-      starRating: stars,
+      title: data.reviewTitle,
+      body: data.reviewBody,
+      pros: data.pros,
+      cons: data.cons,
+      starRating: data.starRating,
       sentimentScore: state.sentimentScore,
       sentimentLabel,
       persona: state.persona,
       wordCount: state.wordCount,
       productName: state.selectedProduct.name,
-      generatedAt: new Date().toISOString(),
+      generatedAt: data.generatedAt,
     };
 
     state.lastReview = review;
     renderReviewOutput(review);
 
   } catch (err) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      showToast('Request timed out. Try again.', 'error');
-    } else {
-      showToast(err.message || 'Review generation failed — check your connection.', 'error');
-    }
+    showToast(err.message || 'Review generation failed — check your connection.', 'error');
   } finally {
     state.isGenerating = false;
     setGeneratingUI(false);

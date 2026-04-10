@@ -97,14 +97,14 @@ async function callWithRetry(fn) {
   }
 }
 
-async function generateReview({ product, sentimentScore, persona = 'casual', wordCount = 120 }) {
+async function generateReview({ product, sentimentScore, persona = 'casual', wordCount = 120, apiKey: apiKeyArg, provider: providerArg, model: modelArg }) {
   const sentimentLabel = toSentimentLabel(sentimentScore);
   const starRating = toStarRating(sentimentScore);
   const prompt = buildPrompt({ product, sentimentLabel, sentimentScore, persona, wordCount });
 
-  const provider = process.env.SWITCHBOARD_PROVIDER || 'anthropic';
-  const model = process.env.SWITCHBOARD_MODEL || (provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4o-mini');
-  const apiKey = process.env.SWITCHBOARD_API_KEY;
+  const provider = providerArg || process.env.SWITCHBOARD_PROVIDER || 'anthropic';
+  const model = modelArg || process.env.SWITCHBOARD_MODEL || (provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4o-mini');
+  const apiKey = apiKeyArg || process.env.SWITCHBOARD_API_KEY;
 
   if (!apiKey) throw new Error('SWITCHBOARD_API_KEY is not set in .env');
 
