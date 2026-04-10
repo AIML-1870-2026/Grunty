@@ -377,31 +377,16 @@ async function callReviewAPI({ productId, sentimentScore, persona, wordCount, ap
 async function generateReview() {
   if (!state.selectedProduct || state.isGenerating) return;
 
-  const key = document.getElementById('api-key-input').value.trim()
-    || localStorage.getItem(`apikey_anthropic`)
-    || localStorage.getItem(`apikey_openai`) || '';
+  const provider = localStorage.getItem('provider') || document.getElementById('provider-select').value;
+  const model = localStorage.getItem(`model_${provider}`) || document.getElementById('model-select').value;
+  const key = localStorage.getItem(`apikey_${provider}`)
+    || document.getElementById('api-key-input').value.trim();
 
   if (!key) {
     showToast('Please enter an API key in Settings ⚙️', 'error');
     openDrawer();
     return;
   }
-
-  // Auto-detect provider from key prefix
-  const detectedProvider = key.startsWith('sk-ant-') ? 'anthropic' : 'openai';
-  const provider = detectedProvider;
-
-  // Auto-select a sensible default model for the detected provider
-  const savedModel = localStorage.getItem(`model_${provider}`);
-  const defaultModel = provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4o-mini';
-  const model = savedModel || defaultModel;
-
-  // Sync the UI to match
-  document.getElementById('provider-select').value = provider;
-  populateModels(provider);
-  document.getElementById('model-select').value = model;
-
-  saveSettings();
 
   state.isGenerating = true;
   setGeneratingUI(true);
@@ -699,6 +684,14 @@ async function init() {
   document.getElementById('settings-btn').addEventListener('click', openDrawer);
   document.getElementById('close-drawer').addEventListener('click', closeDrawer);
   document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
+
+  document.getElementById('save-settings-btn').addEventListener('click', () => {
+    saveSettings();
+    const confirm = document.getElementById('save-confirm');
+    confirm.style.display = 'block';
+    setTimeout(() => { confirm.style.display = 'none'; }, 2000);
+    showToast('Settings saved!', 'success');
+  });
 
   // Provider change
   document.getElementById('provider-select').addEventListener('change', e => {
