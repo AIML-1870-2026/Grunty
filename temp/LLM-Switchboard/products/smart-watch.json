@@ -1,0 +1,18 @@
+{
+  "id": "smart-watch",
+  "name": "Apple Watch Series 9 (45mm)",
+  "category": "Wearables",
+  "price": 429.00,
+  "image": "https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?w=400&q=80",
+  "description": "Next-generation smartwatch with the S9 chip, Double Tap gesture, always-on Retina display, advanced health sensors (ECG, blood oxygen, temperature), and 18-hour battery life.",
+  "attributes": {
+    "brand": "Apple",
+    "color": "Midnight Aluminum",
+    "display": "45mm Always-On Retina",
+    "chip": "Apple S9",
+    "battery": "18 hours",
+    "water_resistance": "50m",
+    "warranty": "1 year"
+  },
+  "tags": ["smartwatch", "apple", "health", "fitness", "wearable"]
+}

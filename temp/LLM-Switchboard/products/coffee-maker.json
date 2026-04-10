@@ -1,0 +1,17 @@
+{
+  "id": "coffee-maker",
+  "name": "Nespresso Vertuo Next Coffee Maker",
+  "category": "Kitchen",
+  "price": 199.95,
+  "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80",
+  "description": "Versatile capsule coffee maker that brews five cup sizes from espresso to Alto XL. Features a 30-second heat-up time, automatic capsule recognition via barcode, and a sleek compact design.",
+  "attributes": {
+    "brand": "Nespresso",
+    "color": "Matte Black",
+    "cup_sizes": "5 (Espresso to Alto)",
+    "heat_up": "30 seconds",
+    "water_tank": "37 oz",
+    "warranty": "2 years"
+  },
+  "tags": ["coffee", "espresso", "capsule", "kitchen", "compact"]
+}

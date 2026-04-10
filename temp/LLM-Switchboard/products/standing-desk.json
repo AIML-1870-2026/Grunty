@@ -1,0 +1,17 @@
+{
+  "id": "standing-desk",
+  "name": "FlexiPro Electric Standing Desk",
+  "category": "Furniture",
+  "price": 699.00,
+  "image": "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&q=80",
+  "description": "Height-adjustable electric standing desk with dual motors, programmable height presets, and a spacious 60×30 inch bamboo desktop. Whisper-quiet operation.",
+  "attributes": {
+    "brand": "FlexiPro",
+    "surface": "Bamboo",
+    "dimensions": "60\" × 30\"",
+    "height_range": "25\" – 51\"",
+    "weight_capacity": "275 lbs",
+    "warranty": "5 years"
+  },
+  "tags": ["desk", "ergonomic", "electric", "home-office", "adjustable"]
+}

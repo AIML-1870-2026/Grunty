@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Review Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================================================
+       HEADER
+       ================================================ -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">⭐</div>
+      <span class="logo-text">AI Review Generator</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+      <button class="icon-btn" id="settings-btn" title="Settings" aria-label="Open settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ================================================
+       APP LAYOUT
+       ================================================ -->
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Products</div>
+        <div class="search-wrap">
+          <input
+            type="search"
+            id="product-search"
+            class="search-input"
+            placeholder="Search products…"
+            autocomplete="off"
+          >
+        </div>
+      </div>
+
+      <div class="category-filters" id="category-filters">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="product-list" id="product-list">
+        <div class="no-products">Loading products…</div>
+      </div>
+    </aside>
+
+    <!-- MAIN PANEL -->
+    <main class="main-panel" id="main-panel">
+
+      <!-- Empty state (shown when no product is selected) -->
+      <div class="empty-state" id="empty-state">
+        <div class="empty-state-icon">🛍️</div>
+        <h3>Select a product</h3>
+        <p>Choose a product from the sidebar to get started generating AI-powered reviews.</p>
+      </div>
+
+      <!-- Product content (hidden until product is selected) -->
+      <div id="product-content" style="display:none; display:flex; flex-direction:column; gap:20px;">
+
+        <!-- Product Card -->
+        <div class="card" id="product-card">
+          <div class="card-label">Product</div>
+          <div class="product-card-inner">
+            <img id="product-img" class="product-hero-img" src="" alt="" onerror="this.style.display='none'; document.getElementById('product-img-fallback').style.display='flex'">
+            <div id="product-img-fallback" class="product-hero-fallback" style="display:none">🛍️</div>
+            <div class="product-info">
+              <div class="product-name" id="product-name"></div>
+              <div class="product-meta">
+                <span class="category-badge" id="product-category"></span>
+                <span class="product-price" id="product-price"></span>
+              </div>
+              <div class="product-description" id="product-description"></div>
+              <div class="attr-chips" id="product-attrs"></div>
+              <div class="tag-pills" id="product-tags"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sentiment Slider -->
+        <div class="card">
+          <div class="card-label">Sentiment</div>
+          <div class="sentiment-header">
+            <span class="sentiment-label-display" id="sentiment-label">Mixed</span>
+            <span class="sentiment-score-badge" id="sentiment-score-badge">50 / 100</span>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" id="sentiment-slider" class="sentiment-slider" min="0" max="100" value="50">
+          </div>
+          <div class="sentiment-spectrum">
+            <span class="spectrum-label" style="color:#FF3B30">Scathing</span>
+            <span class="spectrum-label">Negative</span>
+            <span class="spectrum-label">Mixed</span>
+            <span class="spectrum-label">Positive</span>
+            <span class="spectrum-label" style="color:#30D158">Glowing</span>
+          </div>
+          <div class="star-preview">
+            <div class="stars" id="star-preview"></div>
+            <span class="star-preview-label" id="star-preview-label">3.0 stars</span>
+          </div>
+        </div>
+
+        <!-- Persona Selector -->
+        <div class="card">
+          <div class="card-label">Reviewer Persona</div>
+          <div class="persona-grid" id="persona-grid">
+            <button class="persona-btn active" data-persona="casual">
+              <span class="persona-icon">😊</span>Casual Buyer
+            </button>
+            <button class="persona-btn" data-persona="expert">
+              <span class="persona-icon">🎓</span>Tech Expert
+            </button>
+            <button class="persona-btn" data-persona="power-user">
+              <span class="persona-icon">⚡</span>Power User
+            </button>
+            <button class="persona-btn" data-persona="skeptic">
+              <span class="persona-icon">🤔</span>Skeptic
+            </button>
+          </div>
+        </div>
+
+        <!-- Word Count -->
+        <div class="card">
+          <div class="card-label">Review Length</div>
+          <div class="word-count-header">
+            <span>Target word count</span>
+            <span class="word-count-display" id="word-count-display">150 words</span>
+          </div>
+          <input type="range" id="word-count-slider" class="word-count-slider" min="50" max="400" value="150" step="5">
+          <div class="word-count-presets">
+            <button class="preset-btn" data-words="75">Short</button>
+            <button class="preset-btn active" data-words="150">Standard</button>
+            <button class="preset-btn" data-words="300">Detailed</button>
+          </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button class="generate-btn" id="generate-btn">
+          <span class="btn-icon" id="btn-icon">⭐</span>
+          <span id="btn-label">Generate Review</span>
+        </button>
+
+        <!-- Review Output Card (hidden until generated) -->
+        <div class="card review-card" id="review-output" style="display:none">
+          <div class="card-label">Generated Review</div>
+
+          <div class="review-stars-row">
+            <div class="review-star-rating" id="review-stars"></div>
+            <span class="review-rating-num" id="review-rating-num"></span>
+          </div>
+
+          <div class="review-title" id="review-title"></div>
+          <div class="review-body" id="review-body"></div>
+
+          <div class="pros-cons-grid">
+            <div>
+              <h4 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#34C759;margin-bottom:6px;">Pros</h4>
+              <ul class="pros-list" id="review-pros"></ul>
+            </div>
+            <div>
+              <h4 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FF3B30;margin-bottom:6px;">Cons</h4>
+              <ul class="cons-list" id="review-cons"></ul>
+            </div>
+          </div>
+
+          <div class="review-meta-bar" id="review-meta"></div>
+
+          <div class="review-actions">
+            <button class="action-btn" id="copy-btn">📋 Copy</button>
+            <button class="action-btn" id="export-btn">💾 Export .txt</button>
+            <button class="action-btn" id="regenerate-btn">🔄 Regenerate</button>
+          </div>
+        </div>
+
+      </div><!-- /product-content -->
+
+    </main>
+  </div><!-- /app-layout -->
+
+  <!-- ================================================
+       SETTINGS DRAWER
+       ================================================ -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+
+  <div class="settings-drawer" id="settings-drawer" role="dialog" aria-label="Settings">
+    <div class="drawer-header">
+      <span class="drawer-title">⚙️ Settings</span>
+      <button class="icon-btn" id="close-drawer">✕</button>
+    </div>
+
+    <!-- API Config -->
+    <div class="drawer-section">
+      <h3>API Configuration</h3>
+      <p>Keys are stored in localStorage and never sent anywhere except the provider's API.</p>
+
+      <div class="field-group">
+        <label class="field-label" for="provider-select">Provider</label>
+        <select class="field-select" id="provider-select">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (GPT)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="model-select">Model</label>
+        <select class="field-select" id="model-select"></select>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="api-key-input">API Key</label>
+        <input
+          type="password"
+          class="field-input"
+          id="api-key-input"
+          placeholder="sk-… or sk-ant-…"
+          autocomplete="off"
+        >
+      </div>
+    </div>
+
+    <!-- Appearance -->
+    <div class="drawer-section">
+      <h3>Appearance</h3>
+
+      <div class="color-row" style="margin-bottom:10px">
+        <label>Primary colour</label>
+        <input type="color" class="color-picker" id="color-primary" value="#6C63FF">
+      </div>
+      <div class="color-row" style="margin-bottom:16px">
+        <label>Accent colour</label>
+        <input type="color" class="color-picker" id="color-accent" value="#FF6584">
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Review body font</span>
+        <div class="font-options">
+          <button class="font-opt active" data-font="Georgia, 'Times New Roman', serif" style="font-family:Georgia,serif">Georgia</button>
+          <button class="font-opt" data-font="'Lora', serif" style="font-family:Georgia,serif">Lora</button>
+          <button class="font-opt" data-font="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">System</button>
+          <button class="font-opt" data-font="'Inter', sans-serif">Inter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

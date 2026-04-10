@@ -1,0 +1,17 @@
+{
+  "id": "running-shoes",
+  "name": "Nike Air Zoom Pegasus 41",
+  "category": "Footwear",
+  "price": 130.00,
+  "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80",
+  "description": "Everyday running shoe featuring dual Air Zoom units for springy cushioning, a breathable Flyknit upper, and a wider forefoot for a natural toe splay. Suitable for road and treadmill running.",
+  "attributes": {
+    "brand": "Nike",
+    "color": "White / Blue",
+    "weight": "284g (men's US 10)",
+    "drop": "10mm",
+    "upper": "Flyknit mesh",
+    "warranty": "60-day wear test"
+  },
+  "tags": ["running", "shoes", "sports", "nike", "cushioned"]
+}

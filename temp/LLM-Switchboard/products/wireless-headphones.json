@@ -1,0 +1,17 @@
+{
+  "id": "wireless-headphones",
+  "name": "Sony WH-1000XM5 Headphones",
+  "category": "Electronics",
+  "price": 349.99,
+  "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80",
+  "description": "Industry-leading noise-cancelling over-ear headphones with up to 30-hour battery life, multipoint Bluetooth connection, and crystal-clear hands-free calling.",
+  "attributes": {
+    "brand": "Sony",
+    "color": "Midnight Black",
+    "weight": "250g",
+    "battery": "30 hours",
+    "connectivity": "Bluetooth 5.2",
+    "warranty": "1 year"
+  },
+  "tags": ["audio", "wireless", "noise-cancelling", "over-ear"]
+}
