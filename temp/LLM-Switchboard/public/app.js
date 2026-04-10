@@ -377,10 +377,10 @@ async function callReviewAPI({ productId, sentimentScore, persona, wordCount, ap
 async function generateReview() {
   if (!state.selectedProduct || state.isGenerating) return;
 
-  const provider = localStorage.getItem('provider') || document.getElementById('provider-select').value;
-  const model = localStorage.getItem(`model_${provider}`) || document.getElementById('model-select').value;
-  const key = localStorage.getItem(`apikey_${provider}`)
-    || document.getElementById('api-key-input').value.trim();
+  // Always read from the DOM — it reflects what the user currently sees
+  const provider = document.getElementById('provider-select').value;
+  const model = document.getElementById('model-select').value;
+  const key = document.getElementById('api-key-input').value.trim();
 
   if (!key) {
     showToast('Please enter an API key in Settings ⚙️', 'error');
@@ -422,7 +422,7 @@ async function generateReview() {
     renderReviewOutput(review);
 
   } catch (err) {
-    showToast(err.message || 'Review generation failed — check your connection.', 'error');
+    showToast(`[${provider}] ${err.message || 'Review generation failed.'}`, 'error');
   } finally {
     state.isGenerating = false;
     setGeneratingUI(false);
