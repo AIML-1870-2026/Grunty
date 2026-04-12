@@ -223,10 +223,16 @@
         >
       </div>
 
-      <button class="generate-btn" id="save-settings-btn" style="margin-top:4px;font-size:13px;padding:10px">
-        💾 Save Settings
-      </button>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="generate-btn" id="save-settings-btn" style="font-size:13px;padding:10px;flex:1">
+          💾 Save Settings
+        </button>
+        <button class="action-btn" id="test-key-btn" style="flex:1;justify-content:center">
+          🔑 Test Key
+        </button>
+      </div>
       <div id="save-confirm" style="display:none;text-align:center;font-size:12px;color:#34C759;margin-top:6px">✓ Saved!</div>
+      <div id="test-key-result" style="display:none;text-align:center;font-size:12px;margin-top:6px;padding:8px;border-radius:6px"></div>
     </div>
 
     <!-- Appearance -->

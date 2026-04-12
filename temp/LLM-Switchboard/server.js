@@ -45,6 +45,37 @@ app.get('/api/products/:id', (req, res) => {
   res.json(product);
 });
 
+// POST /api/test-key — verifies credentials without generating a review
+app.post('/api/test-key', async (req, res) => {
+  const { apiKey, provider } = req.body;
+  const key = apiKey || process.env.SWITCHBOARD_API_KEY || '';
+  const prov = provider || 'anthropic';
+
+  if (!key) return res.status(400).json({ ok: false, error: 'No key provided' });
+
+  const masked = key.slice(0, 8) + '...' + key.slice(-4);
+  console.log(`[test-key] provider=${prov} key=${masked}`);
+
+  try {
+    const axios = require('axios');
+    if (prov === 'anthropic') {
+      await axios.post('https://api.anthropic.com/v1/messages', {
+        model: 'claude-haiku-4-5-20251001', max_tokens: 5,
+        messages: [{ role: 'user', content: 'hi' }]
+      }, { headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } });
+    } else {
+      await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-4o-mini', max_tokens: 5,
+        messages: [{ role: 'user', content: 'hi' }]
+      }, { headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' } });
+    }
+    res.json({ ok: true, provider: prov, masked });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    res.status(400).json({ ok: false, provider: prov, masked, error: msg });
+  }
+});
+
 // POST /api/review
 app.post('/api/review', async (req, res) => {
   const {

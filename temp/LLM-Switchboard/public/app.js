@@ -693,6 +693,52 @@ async function init() {
     showToast('Settings saved!', 'success');
   });
 
+  document.getElementById('test-key-btn').addEventListener('click', async () => {
+    const provider = document.getElementById('provider-select').value;
+    const key = document.getElementById('api-key-input').value.trim();
+    const resultEl = document.getElementById('test-key-result');
+
+    if (!key) {
+      resultEl.style.display = 'block';
+      resultEl.style.background = 'rgba(255,59,48,0.1)';
+      resultEl.style.color = '#FF3B30';
+      resultEl.textContent = '✗ No API key entered';
+      return;
+    }
+
+    const btn = document.getElementById('test-key-btn');
+    btn.textContent = '⏳ Testing…';
+    btn.disabled = true;
+    resultEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/test-key', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ apiKey: key, provider }),
+      });
+      const data = await res.json();
+      resultEl.style.display = 'block';
+      if (data.ok) {
+        resultEl.style.background = 'rgba(52,199,89,0.1)';
+        resultEl.style.color = '#34C759';
+        resultEl.textContent = `✓ Key valid — ${data.provider} (${data.masked})`;
+      } else {
+        resultEl.style.background = 'rgba(255,59,48,0.1)';
+        resultEl.style.color = '#FF3B30';
+        resultEl.textContent = `✗ ${data.error} — provider: ${data.provider}, key: ${data.masked}`;
+      }
+    } catch (err) {
+      resultEl.style.display = 'block';
+      resultEl.style.background = 'rgba(255,59,48,0.1)';
+      resultEl.style.color = '#FF3B30';
+      resultEl.textContent = `✗ ${err.message}`;
+    } finally {
+      btn.textContent = '🔑 Test Key';
+      btn.disabled = false;
+    }
+  });
+
   // Provider change
   document.getElementById('provider-select').addEventListener('change', e => {
     const provider = e.target.value;
