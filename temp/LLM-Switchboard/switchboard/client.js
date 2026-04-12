@@ -60,7 +60,6 @@ Rules:
 - cons: 1–3 items; even for positive reviews include at least 1 con`;
 
 function parseResponse(data) {
-  // Try to extract JSON from various response shapes
   let text = '';
 
   // Anthropic shape
@@ -75,14 +74,23 @@ function parseResponse(data) {
     throw new Error('Unrecognised LLM response shape');
   }
 
-  // Strip markdown fences if the model added them anyway
-  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  // Strip markdown fences
+  text = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/m, '').trim();
 
+  // Try direct parse first
   try {
     return JSON.parse(text);
-  } catch {
-    throw new Error(`Failed to parse LLM JSON: ${text.slice(0, 200)}`);
+  } catch {}
+
+  // Extract first {...} block from the text (handles preamble/postamble)
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      return JSON.parse(match[0]);
+    } catch {}
   }
+
+  throw new Error(`Could not parse review JSON from model response. Try again.`);
 }
 
 async function callWithRetry(fn) {
