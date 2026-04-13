@@ -357,18 +357,130 @@ Write a review matching the above sentiment exactly. The tone, word choice, and 
 }
 
 // ─────────────────────────────────────────────────────
-// API call — routed through Express server (avoids CORS)
+// ─────────────────────────────────────────────────────
+// Detect whether the Express server is available
+// ─────────────────────────────────────────────────────
+const HAS_SERVER = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// ─────────────────────────────────────────────────────
+// Shared prompt builders (mirrors switchboard/client.js)
+// ─────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are a product review API. You MUST respond with ONLY a valid JSON object — no intro text, no explanation, no markdown, nothing before or after the JSON.
+
+Your entire response must be this exact structure:
+{"title":"...","body":"...","pros":["...","..."],"cons":["..."]}
+
+Rules:
+- title: max 12 words
+- body: natural human review text matching the requested sentiment exactly
+- pros: 2 to 4 short bullet strings
+- cons: 1 to 3 short bullet strings (always include at least 1 even for positive reviews)
+- Output ONLY the JSON. Any text outside the JSON will break the system.`;
+
+function buildUserPrompt(product, sentimentLabel, sentimentScore, persona, wordCount) {
+  const attrs = product.attributes
+    ? Object.entries(product.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')
+    : 'N/A';
+  return `Product: ${product.name} (${product.category})
+Price: $${product.price}
+Description: ${product.description}
+Key attributes: ${attrs}
+
+Reviewer persona: ${persona}
+Target sentiment: ${sentimentLabel} (score ${sentimentScore}/100)
+Target length: approximately ${wordCount} words in the body.
+
+Write a review matching the above sentiment exactly. The tone, word choice, and pros/cons emphasis must reflect a ${sentimentLabel} customer experience.`;
+}
+
+function parseReviewText(text) {
+  text = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/m, '').trim();
+  try { return JSON.parse(text); } catch {}
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) { try { return JSON.parse(match[0]); } catch {} }
+  // Plain text fallback
+  return { title: text.split(/[.!?]/)[0]?.slice(0, 80) || 'Review', body: text, pros: ['See full review above'], cons: ['No structured breakdown available'] };
+}
+
+// ─────────────────────────────────────────────────────
+// Direct browser API calls (used on GitHub Pages / no server)
+// ─────────────────────────────────────────────────────
+async function callDirectAnthropic({ apiKey, model, userPrompt }) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model, max_tokens: 1024, temperature: 0.85, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: userPrompt }] }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || `Anthropic error ${res.status}`);
+  return parseReviewText(data.content?.[0]?.text || '');
+}
+
+async function callDirectOpenAI({ apiKey, model, userPrompt }) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model, temperature: 0.85, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: userPrompt }] }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || `OpenAI error ${res.status}`);
+  return parseReviewText(data.choices?.[0]?.message?.content || '');
+}
+
+// ─────────────────────────────────────────────────────
+// Unified review call — server if available, direct otherwise
 // ─────────────────────────────────────────────────────
 async function callReviewAPI({ productId, sentimentScore, persona, wordCount, apiKey, provider, model }) {
-  const res = await fetch('/api/review', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ productId, sentimentScore, reviewerPersona: persona, wordCount, apiKey, provider, model }),
-  });
+  if (HAS_SERVER) {
+    const res = await fetch('/api/review', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ productId, sentimentScore, reviewerPersona: persona, wordCount, apiKey, provider, model }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+    return data;
+  }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
-  return data;
+  // No server — call the LLM directly from the browser
+  const product = state.selectedProduct;
+  const sentimentLabel = toSentimentLabel(sentimentScore);
+  const userPrompt = buildUserPrompt(product, sentimentLabel, sentimentScore, persona, wordCount);
+
+  let parsed;
+  if (provider === 'anthropic') {
+    parsed = await callDirectAnthropic({ apiKey, model, userPrompt });
+  } else {
+    parsed = await callDirectOpenAI({ apiKey, model, userPrompt });
+  }
+
+  return {
+    reviewTitle: parsed.title,
+    reviewBody: parsed.body,
+    pros: parsed.pros,
+    cons: parsed.cons,
+    starRating: toStarRating(sentimentScore),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+// Also fix test-key for no-server mode
+async function testKeyDirect({ apiKey, provider }) {
+  try {
+    if (provider === 'anthropic') {
+      await callDirectAnthropic({ apiKey, model: 'claude-haiku-4-5-20251001', userPrompt: 'Reply with {"title":"ok","body":"ok","pros":["ok"],"cons":["ok"]}' });
+    } else {
+      await callDirectOpenAI({ apiKey, model: 'gpt-4o-mini', userPrompt: 'Reply with {"title":"ok","body":"ok","pros":["ok"],"cons":["ok"]}' });
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }
 
 // ─────────────────────────────────────────────────────
@@ -712,21 +824,27 @@ async function init() {
     resultEl.style.display = 'none';
 
     try {
-      const res = await fetch('/api/test-key', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ apiKey: key, provider }),
-      });
-      const data = await res.json();
+      let data;
+      if (HAS_SERVER) {
+        const res = await fetch('/api/test-key', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ apiKey: key, provider }),
+        });
+        data = await res.json();
+      } else {
+        data = await testKeyDirect({ apiKey: key, provider });
+      }
+      const masked = key.slice(0, 8) + '...' + key.slice(-4);
       resultEl.style.display = 'block';
       if (data.ok) {
         resultEl.style.background = 'rgba(52,199,89,0.1)';
         resultEl.style.color = '#34C759';
-        resultEl.textContent = `✓ Key valid — ${data.provider} (${data.masked})`;
+        resultEl.textContent = `✓ Key valid — ${provider} (${masked})`;
       } else {
         resultEl.style.background = 'rgba(255,59,48,0.1)';
         resultEl.style.color = '#FF3B30';
-        resultEl.textContent = `✗ ${data.error} — provider: ${data.provider}, key: ${data.masked}`;
+        resultEl.textContent = `✗ ${data.error} — provider: ${provider}, key: ${masked}`;
       }
     } catch (err) {
       resultEl.style.display = 'block';
