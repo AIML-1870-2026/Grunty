@@ -74,6 +74,8 @@ function parseResponse(data) {
     throw new Error('Unrecognised LLM response shape');
   }
 
+  console.log('[raw response]', JSON.stringify(text.slice(0, 500)));
+
   // Strip markdown fences
   text = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/m, '').trim();
 
