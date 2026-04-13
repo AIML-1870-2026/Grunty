@@ -43,21 +43,17 @@ Target length: approximately ${wordCount} words in the body.
 Write a review matching the above sentiment exactly. The tone, word choice, and pros/cons emphasis must reflect a ${sentimentLabel} customer experience.`;
 }
 
-const SYSTEM_PROMPT = `You are a realistic product reviewer. Write in natural, human language.
-Follow the sentiment guidance precisely — the rating you imply through tone must match the instructed sentiment level.
-Return your response ONLY as valid JSON matching the schema below. Do not include markdown fences.
+const SYSTEM_PROMPT = `You are a product review API. You MUST respond with ONLY a valid JSON object — no intro text, no explanation, no markdown, nothing before or after the JSON.
 
-Schema:
-{
-  "title": "string (max 12 words)",
-  "body": "string",
-  "pros": ["string"],
-  "cons": ["string"]
-}
+Your entire response must be this exact structure:
+{"title":"...","body":"...","pros":["...","..."],"cons":["..."]}
 
 Rules:
-- pros: 2–4 items
-- cons: 1–3 items; even for positive reviews include at least 1 con`;
+- title: max 12 words
+- body: natural human review text matching the requested sentiment exactly
+- pros: 2 to 4 short bullet strings
+- cons: 1 to 3 short bullet strings (always include at least 1 even for positive reviews)
+- Output ONLY the JSON. Any text outside the JSON will break the system.`;
 
 function parseResponse(data) {
   let text = '';
@@ -92,7 +88,16 @@ function parseResponse(data) {
     } catch {}
   }
 
-  throw new Error(`Could not parse review JSON from model response. Try again.`);
+  // Fallback: model returned plain text — wrap it into the expected structure
+  console.warn('[fallback] Model returned plain text, wrapping into JSON structure');
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const title = sentences[0]?.slice(0, 80) || 'Review';
+  return {
+    title,
+    body: text,
+    pros: ['See full review above'],
+    cons: ['No structured breakdown available'],
+  };
 }
 
 async function callWithRetry(fn) {
