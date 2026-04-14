@@ -194,7 +194,33 @@ async function fetchSentry() {
   if (cached) return cached;
 
   const json = await fetchWithTimeout(`${CONFIG.SENTRY_BASE}?all=1`);
-  const result = json.data || [];
+  const rawData = json.data || [];
+
+  // Sentry v2 API returns one record per impact solution — aggregate into per-asteroid summaries
+  const byDes = new Map();
+  for (const entry of rawData) {
+    const des = entry.des?.trim();
+    if (!des) continue;
+    const existing = byDes.get(des);
+    if (!existing) {
+      byDes.set(des, { ...entry, n_imp: 1, date_min: entry.date, date_max: entry.date });
+    } else {
+      existing.n_imp++;
+      // Keep worst-case (highest) Palermo Scale entry as representative
+      if (parseFloat(entry.ps) > parseFloat(existing.ps)) {
+        const { n_imp, date_min, date_max } = existing;
+        Object.assign(existing, entry, { n_imp, date_min, date_max });
+      }
+      if (entry.date && entry.date < existing.date_min) existing.date_min = entry.date;
+      if (entry.date && entry.date > existing.date_max) existing.date_max = entry.date;
+    }
+  }
+
+  const result = Array.from(byDes.values()).map(obj => ({
+    ...obj,
+    // Build a date range string for display (backward-compat field name)
+    range: obj.date_min === obj.date_max ? obj.date_min : `${obj.date_min}–${obj.date_max}`,
+  }));
 
   saveCache('sentry', result);
   return result;
@@ -350,20 +376,19 @@ function renderSentry() {
     return;
   }
 
-  // Sort by ps_cum descending (most hazardous first)
-  const sorted = [...entries].sort((a, b) => parseFloat(b.ps_cum) - parseFloat(a.ps_cum));
+  // Sort by ps descending (most hazardous first) — Sentry v2 uses 'ps' not 'ps_cum'
+  const sorted = [...entries].sort((a, b) => parseFloat(b.ps) - parseFloat(a.ps));
   if (countEl) countEl.textContent = sorted.length;
 
   list.innerHTML = sorted.map(obj => {
-    const level = psLevel(obj.ps_cum);
-    const label = obj.name ? `${obj.name} (${obj.des})` : obj.des;
+    const level = psLevel(obj.ps);
+    const label = obj.fullname || obj.des;
     return `<div class="sentry-card">
       <div class="sentry-card__name">${escHtml(label)}</div>
       <div class="sentry-card__row"><span>Impact prob.</span><span>${fmtSci(obj.ip)}</span></div>
-      <div class="sentry-card__row"><span>Palermo Scale</span><span class="ps-value" data-level="${level}">${fmtNum(obj.ps_cum, 2)}</span></div>
-      <div class="sentry-card__row"><span>Diameter</span><span>${obj.diameter ? fmtNum(obj.diameter, 2) + ' km' : '—'}</span></div>
+      <div class="sentry-card__row"><span>Palermo Scale</span><span class="ps-value" data-level="${level}">${fmtNum(obj.ps, 2)}</span></div>
       <div class="sentry-card__row"><span>Impact years</span><span>${escHtml(obj.range || '—')}</span></div>
-      <div class="sentry-card__row"><span>Solutions</span><span>${escHtml(obj.n_imp || '—')}</span></div>
+      <div class="sentry-card__row"><span>Solutions</span><span>${escHtml(obj.n_imp != null ? String(obj.n_imp) : '—')}</span></div>
     </div>`;
   }).join('');
 }
@@ -449,7 +474,7 @@ function renderDetail(row) {
     </div>`;
 
   if (sentry) {
-    const level = psLevel(sentry.ps_cum);
+    const level = psLevel(sentry.ps);
     html += `
       <h3 class="detail-section-title">⚠ Sentry Impact Risk Data</h3>
       <div class="detail-grid">
@@ -459,7 +484,7 @@ function renderDetail(row) {
         </div>
         <div class="detail-field">
           <span class="detail-field__label">Palermo Scale</span>
-          <span class="detail-field__value ps-value" data-level="${level}">${fmtNum(sentry.ps_cum, 2)}</span>
+          <span class="detail-field__value ps-value" data-level="${level}">${fmtNum(sentry.ps, 2)}</span>
         </div>
         <div class="detail-field">
           <span class="detail-field__label">Impact Year Range</span>
@@ -467,15 +492,15 @@ function renderDetail(row) {
         </div>
         <div class="detail-field">
           <span class="detail-field__label">Impact Solutions</span>
-          <span class="detail-field__value">${escHtml(sentry.n_imp || '—')}</span>
+          <span class="detail-field__value">${escHtml(sentry.n_imp != null ? String(sentry.n_imp) : '—')}</span>
         </div>
         <div class="detail-field">
-          <span class="detail-field__label">Diameter</span>
-          <span class="detail-field__value">${sentry.diameter ? fmtNum(sentry.diameter, 2) + ' km' : '—'}</span>
+          <span class="detail-field__label">Impact Energy</span>
+          <span class="detail-field__value">${sentry.energy ? fmtNum(sentry.energy, 2) + ' Mt' : '—'}</span>
         </div>
         <div class="detail-field">
           <span class="detail-field__label">V∞ (km/s)</span>
-          <span class="detail-field__value">${fmtNum(sentry.v_inf, 2)}</span>
+          <span class="detail-field__value">${fmtNum(sentry.sigma_vi, 2)}</span>
         </div>
       </div>`;
   }
@@ -670,12 +695,12 @@ async function init() {
     // SBDB failure is non-fatal — NeoWs data still renders
   }
 
-  // Sentry — convert array to lookup map by designation
+  // Sentry — convert array to lookup map by designation and fullname (v2 API)
   if (sentryResult.status === 'fulfilled') {
     state.data.sentry = {};
     for (const obj of sentryResult.value) {
       if (obj.des) state.data.sentry[obj.des.trim()] = obj;
-      if (obj.name) state.data.sentry[obj.name.trim()] = obj;
+      if (obj.fullname) state.data.sentry[obj.fullname.trim()] = obj;
     }
     state.loadingState.sentry = 'success';
   } else {
