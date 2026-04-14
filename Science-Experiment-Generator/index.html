@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Science Experiment Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* ── Themes ──────────────────────────────────────────────────────────────── */
+    :root {
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --border: #2a2a4a;
+      --text: #e2e8f0;
+      --text-muted: #8892a4;
+      --accent: #10A37F;
+      --btn-bg: #2d2d50;
+      --btn-hover: #3d3d65;
+      --input-bg: #12122a;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --font-size: 15px;
+      --container-width: 760px;
+      --radius: 10px;
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #d1d9e6;
+      --text: #1a202c;
+      --text-muted: #64748b;
+      --btn-bg: #e8edf5;
+      --btn-hover: #d6dde8;
+      --input-bg: #f0f3f8;
+    }
+
+    /* ── Reset ───────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: var(--font-size);
+      line-height: 1.6;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────────── */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    header h1 { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    #env-status { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    #env-status.loaded  { color: var(--success); }
+    #env-status.missing { color: var(--warning); }
+    .btn-icon {
+      background: var(--btn-bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-muted); font-size: 16px; width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.15s, color 0.15s; flex-shrink: 0;
+    }
+    .btn-icon:hover { background: var(--btn-hover); color: var(--text); }
+    .btn-icon.active { color: var(--accent); border-color: var(--accent); }
+
+    /* ── Settings drawer ─────────────────────────────────────────────────────── */
+    #settings-drawer {
+      background: var(--card); border-bottom: 2px solid var(--accent);
+      padding: 0 24px; max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      position: sticky; top: 57px; z-index: 190;
+    }
+    #settings-drawer.open { max-height: 300px; padding: 18px 24px; }
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px 24px; }
+    .setting-item label {
+      display: block; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .theme-pills { display: flex; gap: 6px; }
+    .theme-pill {
+      flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--btn-bg); color: var(--text-muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+    }
+    .theme-pill.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .accent-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+    .swatch {
+      width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s;
+    }
+    .swatch:hover { transform: scale(1.15); }
+    .swatch.active { border-color: var(--text); transform: scale(1.1); }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row span { font-size: 11px; color: var(--text-muted); width: 28px; text-align: right; }
+    input[type="range"] {
+      flex: 1; -webkit-appearance: none; height: 4px; background: var(--border);
+      border-radius: 2px; outline: none; padding: 0; border: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--accent); cursor: pointer;
+    }
+    .setting-item select {
+      background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-size: 13px; padding: 7px 10px; outline: none;
+      width: 100%; cursor: pointer; transition: border-color 0.2s;
+    }
+    .setting-item select:focus { border-color: var(--accent); }
+    .setting-item select option { background: var(--card); }
+
+    /* ── Container ───────────────────────────────────────────────────────────── */
+    .container {
+      max-width: var(--container-width); margin: 0 auto;
+      padding: 24px 16px 60px; display: flex; flex-direction: column; gap: 16px;
+      transition: max-width 0.25s;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .card-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; gap: 10px;
+    }
+    .card-header .card-title { margin-bottom: 0; }
+
+    .field-wrap { margin-bottom: 14px; }
+    .field-wrap:last-child { margin-bottom: 0; }
+
+    label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+
+    select, textarea {
+      background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-size: 14px; padding: 9px 12px; outline: none;
+      width: 100%; transition: border-color 0.2s;
+    }
+    select:focus, textarea:focus { border-color: var(--accent); }
+    select { cursor: pointer; }
+    select option { background: var(--card); }
+    textarea { resize: vertical; font-family: inherit; line-height: 1.5; min-height: 100px; }
+
+    .hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; font-style: italic; }
+
+    /* ── Key row ─────────────────────────────────────────────────────────────── */
+    .key-row { display: flex; gap: 8px; align-items: center; }
+    .key-row input {
+      flex: 1; background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-size: 13px; font-family: 'Courier New', Courier, monospace;
+      padding: 9px 12px; outline: none; transition: border-color 0.2s;
+    }
+    .key-row input:focus { border-color: var(--accent); }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────────── */
+    .btn-sm {
+      padding: 7px 14px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--btn-bg); color: var(--text); font-size: 12px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-sm:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--text-muted); }
+    .btn-sm:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-accent:hover:not(:disabled) { filter: brightness(1.12); background: var(--accent); }
+
+    .btn-danger { border-color: var(--error); color: var(--error); }
+    .btn-danger:hover:not(:disabled) { background: rgba(248,113,113,0.1); }
+
+    .send-row { display: flex; justify-content: center; }
+    .btn-generate {
+      background: var(--accent); border: 2px solid var(--accent); color: #fff;
+      font-size: 15px; font-weight: 700; padding: 12px 48px; border-radius: 8px;
+      cursor: pointer; transition: filter 0.15s, opacity 0.15s; letter-spacing: 0.02em;
+    }
+    .btn-generate:hover:not(:disabled) { filter: brightness(1.15); }
+    .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Difficulty badge ────────────────────────────────────────────────────── */
+    .diff-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    }
+    .diff-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .diff-Beginner     { background: rgba(74,222,128,0.12); color: #4ade80; }
+    .diff-Intermediate { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .diff-Advanced     { background: rgba(248,113,113,0.12); color: #f87171; }
+
+    /* ── Output card ─────────────────────────────────────────────────────────── */
+    #output-card { display: none; }
+    #output-card.visible { display: block; }
+
+    .output-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .spinner {
+      display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px;
+    }
+    .spinner::before {
+      content: ''; width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      color: var(--error); font-size: 13px;
+      background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 6px; padding: 10px 14px;
+    }
+
+    /* ── Markdown content ────────────────────────────────────────────────────── */
+    .md-content { color: var(--text); line-height: 1.7; }
+    .md-content h1, .md-content h2, .md-content h3 { color: var(--accent); margin: 18px 0 8px; font-weight: 700; }
+    .md-content h1 { font-size: 20px; }
+    .md-content h2 { font-size: 17px; }
+    .md-content h3 { font-size: 15px; }
+    .md-content h1:first-child, .md-content h2:first-child, .md-content h3:first-child { margin-top: 0; }
+    .md-content p { margin-bottom: 10px; }
+    .md-content ul, .md-content ol { padding-left: 22px; margin-bottom: 10px; }
+    .md-content li { margin-bottom: 4px; }
+    .md-content strong { font-weight: 700; }
+    .md-content hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .md-content code {
+      background: var(--input-bg); border-radius: 4px;
+      padding: 2px 6px; font-size: 13px; font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* ── History section ─────────────────────────────────────────────────────── */
+    #history-card { display: none; }
+    #history-card.visible { display: block; }
+
+    .history-toolbar {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .history-toolbar span { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .saved-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .saved-item {
+      background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .saved-item.selected { border-color: var(--accent); }
+
+    .saved-item-header {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      cursor: pointer; user-select: none;
+    }
+    .saved-item-header:hover { background: rgba(255,255,255,0.03); }
+
+    .saved-check {
+      width: 16px; height: 16px; border-radius: 4px;
+      border: 2px solid var(--border); background: var(--btn-bg);
+      cursor: pointer; flex-shrink: 0; accent-color: var(--accent);
+    }
+
+    .saved-info { flex: 1; min-width: 0; }
+    .saved-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .saved-meta  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .saved-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .saved-body {
+      padding: 0 14px; max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      border-top: 0px solid var(--border);
+    }
+    .saved-body.open {
+      max-height: 600px; padding: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .empty-state {
+      text-align: center; padding: 28px 0;
+      color: var(--text-muted); font-size: 13px;
+    }
+
+    /* ── Compare modal ───────────────────────────────────────────────────────── */
+    #compare-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.7); display: none;
+      flex-direction: column; overflow: hidden;
+    }
+    #compare-overlay.open { display: flex; }
+
+    .compare-header {
+      background: var(--card); border-bottom: 2px solid var(--accent);
+      padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .compare-header h2 { font-size: 15px; font-weight: 700; color: var(--accent); flex: 1; }
+
+    .compare-body {
+      display: flex; gap: 0; overflow-x: auto; overflow-y: hidden;
+      flex: 1; align-items: stretch;
+    }
+
+    .compare-col {
+      flex: 1; min-width: 300px; overflow-y: auto;
+      background: var(--bg); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .compare-col:last-child { border-right: none; }
+
+    .compare-col-header {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 12px 16px; position: sticky; top: 0; z-index: 10; flex-shrink: 0;
+    }
+    .compare-col-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .compare-col-meta  { font-size: 11px; color: var(--text-muted); }
+
+    .compare-col-body { padding: 16px; flex: 1; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────────────────────── -->
+<header>
+  <h1>Science Experiment Generator</h1>
+  <div class="header-right">
+    <span id="env-status" class="missing">No API Key</span>
+    <button class="btn-icon" id="settings-btn" onclick="toggleSettings()" title="Customize UI">⚙</button>
+  </div>
+</header>
+
+<!-- ── Settings drawer ───────────────────────────────────────────────────────── -->
+<div id="settings-drawer">
+  <div class="settings-grid">
+    <div class="setting-item">
+      <label>Theme</label>
+      <div class="theme-pills">
+        <div class="theme-pill active" id="pill-dark"  onclick="setTheme('dark')">Dark</div>
+        <div class="theme-pill"        id="pill-light" onclick="setTheme('light')">Light</div>
+      </div>
+    </div>
+    <div class="setting-item">
+      <label>Accent Color</label>
+      <div class="accent-swatches" id="swatches"></div>
+    </div>
+    <div class="setting-item">
+      <label>Font Size — <span id="font-size-label">15px</span></label>
+      <div class="slider-row">
+        <span>12</span>
+        <input type="range" id="font-size-range" min="12" max="20" step="1" value="15" oninput="setFontSize(this.value)">
+        <span>20</span>
+      </div>
+    </div>
+    <div class="setting-item">
+      <label>Width</label>
+      <select onchange="setWidth(this.value)">
+        <option value="600px">Narrow (600px)</option>
+        <option value="760px" selected>Medium (760px)</option>
+        <option value="960px">Wide (960px)</option>
+        <option value="1140px">Full (1140px)</option>
+      </select>
+    </div>
+    <div class="setting-item">
+      <label>Card Corners</label>
+      <select onchange="setRadius(this.value)">
+        <option value="4px">Sharp</option>
+        <option value="10px" selected>Rounded</option>
+        <option value="18px">Pill</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────────────────────────────── -->
+<div class="container">
+
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-title">OpenAI API Key</div>
+    <div class="key-row">
+      <input type="password" id="key-input" placeholder="sk-..." autocomplete="off" oninput="onKeyInput()">
+      <button class="btn-sm" onclick="toggleKeyVisibility()">Show</button>
+      <button class="btn-sm btn-accent" onclick="applyKey()">Apply</button>
+    </div>
+    <p class="hint" style="margin-top:8px;">Used in-memory only — never saved. A <code style="font-family:monospace;font-size:11px;background:var(--input-bg);padding:1px 4px;border-radius:3px;">.env</code> file is also auto-loaded if present.</p>
+  </div>
+
+  <!-- Setup -->
+  <div class="card">
+    <div class="card-title">Experiment Setup</div>
+    <div class="field-wrap">
+      <label for="grade-select">Grade Level</label>
+      <select id="grade-select">
+        <option value="K-2">K–2</option>
+        <option value="3-5">3–5</option>
+        <option value="6-8" selected>6–8</option>
+        <option value="9-12">9–12</option>
+      </select>
+    </div>
+    <div class="field-wrap">
+      <label for="supplies-input">Available Supplies</label>
+      <textarea id="supplies-input"
+        placeholder="e.g. baking soda, vinegar, food coloring, balloons, string, plastic cups, salt..."
+        rows="4"></textarea>
+      <p class="hint">List whatever you have on hand — comma-separated or free-form is fine.</p>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <div class="send-row">
+    <button class="btn-generate" id="generate-btn" onclick="generate()">Generate Experiment</button>
+  </div>
+
+  <!-- Output -->
+  <div class="card" id="output-card">
+    <div class="card-header">
+      <div class="card-title" id="output-label">Experiment</div>
+      <div class="output-actions" id="output-actions"></div>
+    </div>
+    <div class="md-content" id="experiment-output"></div>
+  </div>
+
+  <!-- History -->
+  <div class="card" id="history-card">
+    <div class="card-header">
+      <div class="card-title">Saved Experiments</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-sm btn-accent" id="compare-btn" onclick="openCompare()" disabled>Compare Selected</button>
+        <button class="btn-sm btn-danger" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+    <div class="saved-list" id="saved-list"></div>
+  </div>
+
+</div>
+
+<!-- ── Compare overlay ────────────────────────────────────────────────────────── -->
+<div id="compare-overlay">
+  <div class="compare-header">
+    <h2>Comparing Experiments</h2>
+    <button class="btn-sm" onclick="closeCompare()">✕ Close</button>
+  </div>
+  <div class="compare-body" id="compare-body"></div>
+</div>
+
+<script>
+  // ── Settings ──────────────────────────────────────────────────────────────────
+  const ACCENTS = [
+    { name: 'Green',  hex: '#10A37F' }, { name: 'Blue',   hex: '#3B82F6' },
+    { name: 'Purple', hex: '#8B5CF6' }, { name: 'Pink',   hex: '#EC4899' },
+    { name: 'Orange', hex: '#F97316' }, { name: 'Red',    hex: '#EF4444' },
+    { name: 'Teal',   hex: '#14B8A6' }, { name: 'Yellow', hex: '#EAB308' },
+  ];
+  const DEFAULTS = { theme: 'dark', accent: '#10A37F', fontSize: 15, width: '760px', radius: '10px' };
+
+  function savePrefs(p) { localStorage.setItem('seg_prefs', JSON.stringify(p)); }
+  function loadPrefs()  {
+    try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('seg_prefs') || '{}') }; }
+    catch { return { ...DEFAULTS }; }
+  }
+
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('pill-dark').classList.toggle('active', t === 'dark');
+    document.getElementById('pill-light').classList.toggle('active', t === 'light');
+    const p = loadPrefs(); p.theme = t; savePrefs(p);
+  }
+  function setAccent(hex) {
+    document.documentElement.style.setProperty('--accent', hex);
+    document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.hex === hex));
+    const p = loadPrefs(); p.accent = hex; savePrefs(p);
+  }
+  function setFontSize(px) {
+    document.documentElement.style.setProperty('--font-size', px + 'px');
+    document.getElementById('font-size-label').textContent = px + 'px';
+    document.getElementById('font-size-range').value = px;
+    const p = loadPrefs(); p.fontSize = Number(px); savePrefs(p);
+  }
+  function setWidth(val) {
+    document.documentElement.style.setProperty('--container-width', val);
+    const p = loadPrefs(); p.width = val; savePrefs(p);
+  }
+  function setRadius(val) {
+    document.documentElement.style.setProperty('--radius', val);
+    const p = loadPrefs(); p.radius = val; savePrefs(p);
+  }
+  function buildSwatches(activeHex) {
+    const c = document.getElementById('swatches');
+    c.innerHTML = '';
+    ACCENTS.forEach(({ name, hex }) => {
+      const el = document.createElement('div');
+      el.className = 'swatch' + (hex === activeHex ? ' active' : '');
+      el.style.background = hex; el.title = name; el.dataset.hex = hex;
+      el.onclick = () => setAccent(hex);
+      c.appendChild(el);
+    });
+  }
+  function applyPrefs() {
+    const p = loadPrefs();
+    setTheme(p.theme); setAccent(p.accent); setFontSize(p.fontSize);
+    setWidth(p.width); setRadius(p.radius); buildSwatches(p.accent);
+    const sels = document.querySelectorAll('#settings-drawer select');
+    if (sels[0]) sels[0].value = p.width;
+    if (sels[1]) sels[1].value = p.radius;
+  }
+  function toggleSettings() {
+    document.getElementById('settings-drawer').classList.toggle('open');
+    document.getElementById('settings-btn').classList.toggle('active');
+  }
+
+  // ── API Key ───────────────────────────────────────────────────────────────────
+  let apiKey = null;
+
+  function setKeyStatus(text, cls) {
+    const el = document.getElementById('env-status');
+    el.textContent = text; el.className = cls;
+  }
+  function toggleKeyVisibility() {
+    const input = document.getElementById('key-input');
+    const btn   = input.nextElementSibling;
+    if (input.type === 'password') { input.type = 'text';     btn.textContent = 'Hide'; }
+    else                           { input.type = 'password'; btn.textContent = 'Show'; }
+  }
+  function applyKey() {
+    const val = document.getElementById('key-input').value.trim();
+    if (!val) { setKeyStatus('No API Key', 'missing'); apiKey = null; return; }
+    apiKey = val; setKeyStatus('API Key Set', 'loaded');
+  }
+  function onKeyInput() {
+    if (!document.getElementById('key-input').value.trim() && !apiKey)
+      setKeyStatus('No API Key', 'missing');
+  }
+  async function loadEnv() {
+    try {
+      const res = await fetch('.env');
+      if (!res.ok) throw new Error();
+      const text = await res.text();
+      for (const line of text.split('\n')) {
+        const t = line.trim();
+        if (!t || t.startsWith('#')) continue;
+        const eq = t.indexOf('='); if (eq === -1) continue;
+        const k = t.slice(0, eq).trim();
+        const v = t.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+        if (k === 'OPENAI_API_KEY' && v) apiKey = v;
+      }
+      if (apiKey) { document.getElementById('key-input').value = apiKey; setKeyStatus('API Key Loaded', 'loaded'); }
+      else          setKeyStatus('Key Missing in .env', 'missing');
+    } catch { setKeyStatus('No API Key', 'missing'); }
+  }
+
+  // ── Difficulty helpers ────────────────────────────────────────────────────────
+  const DIFF_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+
+  function parseDifficulty(markdown) {
+    // Looks for a line: DIFFICULTY: Beginner (anywhere in the text)
+    const m = markdown.match(/^DIFFICULTY:\s*(Beginner|Intermediate|Advanced)/im);
+    if (!m) return { difficulty: 'Beginner', markdown };
+    return {
+      difficulty: m[1],
+      markdown: markdown.replace(/^DIFFICULTY:.*\n?/im, '').trimStart()
+    };
+  }
+
+  function diffBadgeHTML(level) {
+    return `<span class="diff-badge diff-${level}">${level}</span>`;
+  }
+
+  // ── Storage ───────────────────────────────────────────────────────────────────
+  function getSaved() {
+    try { return JSON.parse(localStorage.getItem('seg_saved') || '[]'); }
+    catch { return []; }
+  }
+  function setSaved(arr) { localStorage.setItem('seg_saved', JSON.stringify(arr)); }
+
+  function saveExperiment(exp) {
+    const arr = getSaved();
+    arr.unshift(exp);          // newest first
+    setSaved(arr);
+    renderHistory();
+  }
+  function deleteExperiment(id) {
+    setSaved(getSaved().filter(e => e.id !== id));
+    renderHistory();
+    syncCompareBtn();
+  }
+  function clearAll() {
+    if (!confirm('Delete all saved experiments?')) return;
+    setSaved([]);
+    renderHistory();
+    syncCompareBtn();
+  }
+
+  // ── Render history ────────────────────────────────────────────────────────────
+  function renderHistory() {
+    const saved = getSaved();
+    const card  = document.getElementById('history-card');
+    const list  = document.getElementById('saved-list');
+
+    if (saved.length === 0) {
+      card.classList.remove('visible');
+      return;
+    }
+    card.classList.add('visible');
+
+    list.innerHTML = saved.map(exp => `
+      <div class="saved-item" id="si-${exp.id}" data-id="${exp.id}">
+        <div class="saved-item-header" onclick="toggleSavedBody('${exp.id}')">
+          <input type="checkbox" class="saved-check" data-id="${exp.id}"
+            onclick="event.stopPropagation(); toggleSelect('${exp.id}', this)"
+            ${isSelected(exp.id) ? 'checked' : ''}>
+          <div class="saved-info">
+            <div class="saved-title">${escHtml(exp.title)}</div>
+            <div class="saved-meta">Grade ${escHtml(exp.grade)} · ${formatDate(exp.savedAt)}</div>
+          </div>
+          ${diffBadgeHTML(exp.difficulty)}
+          <div class="saved-actions" onclick="event.stopPropagation()">
+            <button class="btn-sm btn-danger" onclick="deleteExperiment('${exp.id}')">Delete</button>
+          </div>
+        </div>
+        <div class="saved-body" id="sb-${exp.id}">
+          <div class="md-content">${marked.parse(exp.markdown)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleSavedBody(id) {
+    document.getElementById('sb-' + id).classList.toggle('open');
+  }
+
+  // ── Selection for compare ─────────────────────────────────────────────────────
+  let selectedIds = new Set();
+
+  function isSelected(id) { return selectedIds.has(id); }
+
+  function toggleSelect(id, checkbox) {
+    if (checkbox.checked) selectedIds.add(id);
+    else                  selectedIds.delete(id);
+    const item = document.getElementById('si-' + id);
+    if (item) item.classList.toggle('selected', checkbox.checked);
+    syncCompareBtn();
+  }
+
+  function syncCompareBtn() {
+    // Remove stale IDs (deleted experiments)
+    const savedIds = new Set(getSaved().map(e => e.id));
+    selectedIds.forEach(id => { if (!savedIds.has(id)) selectedIds.delete(id); });
+    document.getElementById('compare-btn').disabled = selectedIds.size < 2;
+  }
+
+  // ── Compare overlay ───────────────────────────────────────────────────────────
+  function openCompare() {
+    const saved = getSaved();
+    const toCompare = [...selectedIds].map(id => saved.find(e => e.id === id)).filter(Boolean);
+    if (toCompare.length < 2) return;
+
+    const body = document.getElementById('compare-body');
+    body.innerHTML = toCompare.map(exp => `
+      <div class="compare-col">
+        <div class="compare-col-header">
+          <div class="compare-col-title">${escHtml(exp.title)}</div>
+          <div class="compare-col-meta">
+            Grade ${escHtml(exp.grade)} · ${diffBadgeHTML(exp.difficulty)} · ${formatDate(exp.savedAt)}
+          </div>
+        </div>
+        <div class="compare-col-body md-content">${marked.parse(exp.markdown)}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('compare-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCompare() {
+    document.getElementById('compare-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ── Generate ──────────────────────────────────────────────────────────────────
+  let lastGenerated = null;   // holds {title, grade, supplies, difficulty, markdown}
+
+  async function generate() {
+    const grade    = document.getElementById('grade-select').value;
+    const supplies = document.getElementById('supplies-input').value.trim();
+    const btn      = document.getElementById('generate-btn');
+    const card     = document.getElementById('output-card');
+    const output   = document.getElementById('experiment-output');
+    const label    = document.getElementById('output-label');
+    const actions  = document.getElementById('output-actions');
+
+    if (!apiKey) { alert('No OpenAI API key set. Paste your key above and click Apply.'); return; }
+    if (!supplies) { alert('Please enter your available supplies before generating.'); return; }
+
+    btn.disabled = true;
+    lastGenerated = null;
+    card.classList.add('visible');
+    label.textContent = 'Experiment';
+    actions.innerHTML = '';
+    output.innerHTML = '<div class="spinner">Generating your experiment…</div>';
+
+    const systemPrompt = `You are an enthusiastic and knowledgeable science teacher.
+You design safe, fun, hands-on science experiments tailored to specific grade levels.
+Your experiments use only the supplies the student has available.
+
+IMPORTANT: Begin your response with exactly this line (nothing before it):
+DIFFICULTY: <level>
+Where <level> is one of: Beginner, Intermediate, or Advanced.
+Choose based on the complexity of the experiment for the given grade level.
+
+Then on the next line, start the markdown experiment with these sections:
+the experiment title (as an H1), a brief overview, the scientific concept it demonstrates,
+materials needed (only from the provided list), step-by-step instructions,
+what to observe, and a short explanation of the science behind it.
+Keep safety top of mind and flag any precautions clearly.`;
+
+    const userPrompt = `Create a science experiment for grade level ${grade} using only these available supplies: ${supplies}.
+
+The experiment should be engaging and appropriate for ${grade} students.
+Use ONLY the supplies listed above — do not suggest additional materials.
+Start with the DIFFICULTY line, then write the experiment in markdown.`;
+
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user',   content: userPrompt   }
+          ],
+          temperature: 0.8, max_tokens: 1400
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || res.statusText);
+      }
+
+      const data = await res.json();
+      const raw  = data.choices?.[0]?.message?.content || '';
+      const { difficulty, markdown } = parseDifficulty(raw);
+
+      // Extract title from first H1
+      const titleMatch = markdown.match(/^#\s+(.+)/m);
+      const title = titleMatch ? titleMatch[1].trim() : 'Untitled Experiment';
+
+      lastGenerated = { title, grade, supplies, difficulty, markdown };
+
+      label.textContent = 'Your Experiment';
+      actions.innerHTML = `
+        ${diffBadgeHTML(difficulty)}
+        <button class="btn-sm btn-accent" onclick="saveCurrentExperiment()">Save Experiment</button>
+      `;
+      output.innerHTML = marked.parse(markdown);
+
+    } catch (err) {
+      output.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function saveCurrentExperiment() {
+    if (!lastGenerated) return;
+    const exp = {
+      id: Date.now().toString(),
+      savedAt: new Date().toISOString(),
+      ...lastGenerated
+    };
+    saveExperiment(exp);
+
+    // Swap button to a "Saved!" confirmation
+    const actions = document.getElementById('output-actions');
+    const saveBtn = actions.querySelector('.btn-accent');
+    if (saveBtn) {
+      saveBtn.textContent = 'Saved!';
+      saveBtn.disabled = true;
+    }
+  }
+
+  // ── Utility ───────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+  applyPrefs();
+  loadEnv();
+  renderHistory();
+</script>
+
+</body>
+</html>
