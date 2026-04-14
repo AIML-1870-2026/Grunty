@@ -200,11 +200,9 @@
       <p>Keys are stored in localStorage and never sent anywhere except the provider's API.</p>
 
       <div class="field-group">
-        <label class="field-label" for="provider-select">Provider</label>
-        <select class="field-select" id="provider-select">
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="openai">OpenAI (GPT)</option>
-        </select>
+        <label class="field-label">Provider</label>
+        <div class="field-input" style="opacity:0.7;cursor:default;">OpenAI (GPT)</div>
+        <input type="hidden" id="provider-select" value="openai">
       </div>
 
       <div class="field-group">

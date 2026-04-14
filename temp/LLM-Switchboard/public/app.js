@@ -287,8 +287,7 @@ function loadSettings() {
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙' : '☀️';
 
-  const provider = localStorage.getItem('provider') || 'anthropic';
-  document.getElementById('provider-select').value = provider;
+  const provider = 'openai';
   populateModels(provider);
 
   const key = localStorage.getItem(`apikey_${provider}`) || '';
@@ -309,11 +308,10 @@ function loadSettings() {
 }
 
 function saveSettings() {
-  const provider = document.getElementById('provider-select').value;
+  const provider = 'openai';
   const model = document.getElementById('model-select').value;
   const key = document.getElementById('api-key-input').value.trim();
 
-  localStorage.setItem('provider', provider);
   localStorage.setItem(`model_${provider}`, model);
   if (key) localStorage.setItem(`apikey_${provider}`, key);
 }
@@ -405,21 +403,6 @@ function parseReviewText(text) {
 // ─────────────────────────────────────────────────────
 // Direct browser API calls (used on GitHub Pages / no server)
 // ─────────────────────────────────────────────────────
-async function callDirectAnthropic({ apiKey, model, userPrompt }) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({ model, max_tokens: 1024, temperature: 0.85, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: userPrompt }] }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `Anthropic error ${res.status}`);
-  return parseReviewText(data.content?.[0]?.text || '');
-}
 
 async function callDirectOpenAI({ apiKey, model, userPrompt }) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -452,12 +435,7 @@ async function callReviewAPI({ productId, sentimentScore, persona, wordCount, ap
   const sentimentLabel = toSentimentLabel(sentimentScore);
   const userPrompt = buildUserPrompt(product, sentimentLabel, sentimentScore, persona, wordCount);
 
-  let parsed;
-  if (provider === 'anthropic') {
-    parsed = await callDirectAnthropic({ apiKey, model, userPrompt });
-  } else {
-    parsed = await callDirectOpenAI({ apiKey, model, userPrompt });
-  }
+  const parsed = await callDirectOpenAI({ apiKey, model, userPrompt });
 
   return {
     reviewTitle: parsed.title,
@@ -472,11 +450,7 @@ async function callReviewAPI({ productId, sentimentScore, persona, wordCount, ap
 // Also fix test-key for no-server mode
 async function testKeyDirect({ apiKey, provider }) {
   try {
-    if (provider === 'anthropic') {
-      await callDirectAnthropic({ apiKey, model: 'claude-haiku-4-5-20251001', userPrompt: 'Reply with {"title":"ok","body":"ok","pros":["ok"],"cons":["ok"]}' });
-    } else {
-      await callDirectOpenAI({ apiKey, model: 'gpt-4o-mini', userPrompt: 'Reply with {"title":"ok","body":"ok","pros":["ok"],"cons":["ok"]}' });
-    }
+    await callDirectOpenAI({ apiKey, model: 'gpt-4o-mini', userPrompt: 'Reply with {"title":"ok","body":"ok","pros":["ok"],"cons":["ok"]}' });
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
@@ -489,8 +463,7 @@ async function testKeyDirect({ apiKey, provider }) {
 async function generateReview() {
   if (!state.selectedProduct || state.isGenerating) return;
 
-  // Always read from the DOM — it reflects what the user currently sees
-  const provider = document.getElementById('provider-select').value;
+  const provider = 'openai';
   const model = document.getElementById('model-select').value;
   const key = document.getElementById('api-key-input').value.trim();
 
@@ -855,15 +828,6 @@ async function init() {
       btn.textContent = '🔑 Test Key';
       btn.disabled = false;
     }
-  });
-
-  // Provider change
-  document.getElementById('provider-select').addEventListener('change', e => {
-    const provider = e.target.value;
-    populateModels(provider);
-    const savedKey = localStorage.getItem(`apikey_${provider}`) || '';
-    document.getElementById('api-key-input').value = savedKey;
-    localStorage.setItem('provider', provider);
   });
 
   // Model change
