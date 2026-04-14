@@ -48,6 +48,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.6;
+  padding-top: 37px; /* offset for fixed edu-warning-banner */
 }
 a { color: var(--color-accent-2); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -1176,6 +1177,26 @@ img, svg { display: block; }
 .usage-count-text { font-size: .8rem; color: var(--color-muted); font-family: var(--font-mono); }
 .usage-bar-track { height: 6px; background: var(--color-border); border-radius: 3px; overflow: hidden; }
 .usage-bar-fill { height: 100%; background: var(--color-accent); border-radius: 3px; width: 0%; transition: width .5s ease; }
+
+/* --- Educational Use Warning Banner ----------------------- */
+.edu-warning-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  background: #7c2d12;
+  border-bottom: 1px solid #b45309;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+.edu-warning-banner svg { flex-shrink: 0; color: #fbbf24; }
+.edu-warning-banner span { font-size: .78rem; color: #fef3c7; line-height: 1.5; }
+.edu-warning-banner strong { color: #fde68a; }
 
 /* --- Disclaimer ------------------------------------------- */
 .disclaimer {
