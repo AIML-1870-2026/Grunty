@@ -1,11 +1,17 @@
 /* ===== CONFIG ===== */
 // Get a free key at https://api.nasa.gov/
+// ssd-api.jpl.nasa.gov does not send CORS headers, so browser requests are
+// blocked. Route those two endpoints through a CORS proxy.
+function proxied(url) {
+  return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url);
+}
+
 const CONFIG = {
   NASA_API_KEY: 'eBGyNLvjH7pQPglSgsRjq3z4PmuETmY5HGv2xOGJ',
   NEOWS_BASE:   'https://api.nasa.gov/neo/rest/v1/feed',
   SBDB_BASE:    'https://ssd-api.jpl.nasa.gov/cad.api',
   SENTRY_BASE:  'https://ssd-api.jpl.nasa.gov/sentry.api',
-  FETCH_TIMEOUT_MS: 10000,
+  FETCH_TIMEOUT_MS: 15000,
   CACHE_TTL_MS:     5 * 60 * 1000, // 5 minutes
   DEBOUNCE_MS:      500,
 };
@@ -20,7 +26,8 @@ const state = {
   data: {
     neows: [],
     sbdb: [],
-    sentry: {},
+    sentry: {},      // lookup map keyed by des/name for table-row matching
+    sentryList: [],  // ordered array for sidebar rendering
   },
   merged: [],
   sortBy: 'date',
@@ -138,7 +145,7 @@ async function fetchNeoWs(filters) {
 
   // Flatten date-keyed structure into a single array of close-approach records
   const result = [];
-  for (const [date, asteroids] of Object.entries(objects)) {
+  for (const [, asteroids] of Object.entries(objects)) {
     for (const ast of asteroids) {
       for (const ca of ast.close_approach_data) {
         result.push({
@@ -178,7 +185,7 @@ async function fetchSBDB(filters) {
     'neo':      '1',
   });
 
-  const json = await fetchWithTimeout(`${CONFIG.SBDB_BASE}?${params}`);
+  const json = await fetchWithTimeout(proxied(`${CONFIG.SBDB_BASE}?${params}`));
   const fields = json.fields || [];
 
   const result = (json.data || []).map(row =>
@@ -193,33 +200,15 @@ async function fetchSentry() {
   const cached = loadCache('sentry');
   if (cached) return cached;
 
-  const json = await fetchWithTimeout(`${CONFIG.SENTRY_BASE}?all=1`);
+  // Default endpoint returns one pre-aggregated object per asteroid with named fields
+  // Fields include: des, fullname, ps_cum, ps_max, ip, n_imp, range, diameter, h, etc.
+  const json = await fetchWithTimeout(proxied(CONFIG.SENTRY_BASE));
   const rawData = json.data || [];
 
-  // Sentry v2 API returns one record per impact solution — aggregate into per-asteroid summaries
-  const byDes = new Map();
-  for (const entry of rawData) {
-    const des = entry.des?.trim();
-    if (!des) continue;
-    const existing = byDes.get(des);
-    if (!existing) {
-      byDes.set(des, { ...entry, n_imp: 1, date_min: entry.date, date_max: entry.date });
-    } else {
-      existing.n_imp++;
-      // Keep worst-case (highest) Palermo Scale entry as representative
-      if (parseFloat(entry.ps) > parseFloat(existing.ps)) {
-        const { n_imp, date_min, date_max } = existing;
-        Object.assign(existing, entry, { n_imp, date_min, date_max });
-      }
-      if (entry.date && entry.date < existing.date_min) existing.date_min = entry.date;
-      if (entry.date && entry.date > existing.date_max) existing.date_max = entry.date;
-    }
-  }
-
-  const result = Array.from(byDes.values()).map(obj => ({
+  const result = rawData.map(obj => ({
     ...obj,
-    // Build a date range string for display (backward-compat field name)
-    range: obj.date_min === obj.date_max ? obj.date_min : `${obj.date_min}–${obj.date_max}`,
+    // Normalise Palermo Scale: display code expects 'ps', API returns 'ps_cum'
+    ps: obj.ps_cum ?? obj.ps,
   }));
 
   saveCache('sentry', result);
@@ -364,7 +353,7 @@ function renderSentry() {
   const countEl = document.getElementById('sentry-count');
   if (!list) return;
 
-  const entries = Object.values(state.data.sentry);
+  const entries = state.data.sentryList;
 
   if (state.loadingState.sentry === 'error') {
     list.innerHTML = '<p class="sentry-empty">Sentry data unavailable.</p>';
@@ -425,7 +414,6 @@ function renderDetail(row) {
   const content = document.getElementById('detail-content');
   if (!content) return;
 
-  const sbdb = row.sbdb;
   const sentry = row.sentry;
 
   const diamStr = (row.diam_min != null && row.diam_max != null)
@@ -650,8 +638,9 @@ function updateLastUpdated() {
 
 /* ===== INIT ===== */
 async function init() {
-  // Reset loading states
+  // Reset loading states and sentry data
   state.loadingState = { neows: 'loading', sbdb: 'loading', sentry: 'loading' };
+  state.data.sentryList = [];
   renderStatus();
 
   const icon = document.getElementById('refresh-icon');
@@ -695,16 +684,19 @@ async function init() {
     // SBDB failure is non-fatal — NeoWs data still renders
   }
 
-  // Sentry — convert array to lookup map by designation and fullname (v2 API)
+  // Sentry — build lookup map (for table-row matching) and a separate render list
   if (sentryResult.status === 'fulfilled') {
+    const sentryArr = sentryResult.value;
     state.data.sentry = {};
-    for (const obj of sentryResult.value) {
-      if (obj.des) state.data.sentry[obj.des.trim()] = obj;
-      if (obj.fullname) state.data.sentry[obj.fullname.trim()] = obj;
+    for (const obj of sentryArr) {
+      if (obj.des)  state.data.sentry[obj.des.trim()]  = obj;
+      if (obj.name) state.data.sentry[obj.name.trim()] = obj;
     }
+    state.data.sentryList = sentryArr;
     state.loadingState.sentry = 'success';
   } else {
     state.data.sentry = {};
+    state.data.sentryList = [];
     state.loadingState.sentry = 'error';
     showSentryError(`Sentry failed: ${sentryResult.reason?.message}`);
   }
