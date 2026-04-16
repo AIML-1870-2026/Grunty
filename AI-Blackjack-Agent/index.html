@@ -34,6 +34,11 @@ header h1{font-size:1.2rem;color:var(--gold);letter-spacing:.08em}
 .btn-red{background:#dc2626;color:#fff}
 .btn-blue{background:var(--blue);color:#fff}
 .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-auto{background:#7c3aed;color:#fff}
+.btn-auto.active{background:#dc2626;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+#auto-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);border-radius:8px;flex-wrap:wrap}
+.auto-lbl{font-size:.75rem;color:var(--muted)}
 .btn-file{position:relative;overflow:hidden}
 .btn-file input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
 
@@ -184,6 +189,14 @@ canvas{display:block;width:100%!important}
         <button class="btn btn-green" id="btn-hit" onclick="playerHit()" disabled>Hit</button>
         <button class="btn btn-red" id="btn-stand" onclick="playerStand()" disabled>Stand</button>
         <button class="btn btn-blue" id="btn-exec" onclick="executeRec()" disabled>Execute AI</button>
+        <button class="btn btn-auto" id="btn-auto" onclick="toggleAuto()">&#9654; Auto Play</button>
+      </div>
+      <div id="auto-bar" style="display:none">
+        <span class="auto-lbl">Speed:</span>
+        <input type="range" id="auto-speed" min="1" max="5" value="3" style="width:90px;accent-color:var(--gold)">
+        <span id="auto-speed-lbl" style="font-size:.8rem;color:var(--muted)">Normal</span>
+        <span class="auto-lbl" style="margin-left:10px">Hands played:</span>
+        <span id="auto-count" style="color:var(--gold);font-weight:700">0</span>
       </div>
       <div id="error-msg"></div>
     </div>
@@ -284,6 +297,9 @@ const G = {
   aiText: '',
   explainLevel: 'statistical',
   riskTolerance: 'neutral',
+  autoMode: false,
+  autoCount: 0,
+  autoTimer: null,
   stats: {
     hands: 0, wins: 0, losses: 0, pushes: 0,
     startBal: 1000,
@@ -431,7 +447,67 @@ function resolve(result) {
   updateStats();
   drawChart();
   if (G.deck.length < 10) G.deck = mkDeck();
+
+  if (G.autoMode) {
+    G.autoCount++;
+    document.getElementById('auto-count').textContent = G.autoCount;
+    if (G.balance <= 0) { stopAuto('Out of balance \u2014 auto play stopped.'); return; }
+    G.autoTimer = setTimeout(dealNewHand, autoDelay());
+  }
 }
+
+/* ============================================================
+   AUTO PLAY
+============================================================ */
+const SPEED_LABELS = ['Very Slow','Slow','Normal','Fast','Very Fast'];
+const SPEED_DELAYS = [3000, 2000, 1200, 600, 200]; // ms between hands
+const ACTION_DELAYS = [1800, 1200, 700, 350, 100];  // ms before executing AI rec
+
+function autoDelay()   { return SPEED_DELAYS[autoSpeedIdx()]; }
+function actionDelay() { return ACTION_DELAYS[autoSpeedIdx()]; }
+function autoSpeedIdx() { return parseInt(document.getElementById('auto-speed').value) - 1; }
+
+function toggleAuto() {
+  if (!G.apiKey) { showErr('Enter your API key first to use Auto Play.'); return; }
+  G.autoMode ? stopAuto() : startAuto();
+}
+
+function startAuto() {
+  G.autoMode = true;
+  G.autoCount = 0;
+  document.getElementById('btn-auto').textContent = '\u25A0 Stop Auto';
+  document.getElementById('btn-auto').classList.add('active');
+  document.getElementById('auto-bar').style.display = 'flex';
+  document.getElementById('auto-count').textContent = 0;
+  // Disable manual controls
+  ['btn-deal','btn-hit','btn-stand','btn-exec'].forEach(id =>
+    document.getElementById(id).disabled = true
+  );
+  if (G.phase === 'idle' || G.phase === 'ended') dealNewHand();
+}
+
+function stopAuto(msg) {
+  G.autoMode = false;
+  clearTimeout(G.autoTimer);
+  document.getElementById('btn-auto').textContent = '\u25B6 Auto Play';
+  document.getElementById('btn-auto').classList.remove('active');
+  document.getElementById('auto-bar').style.display = 'none';
+  render(); // re-enables manual controls
+  if (msg) showErr(msg);
+}
+
+// Called after AI returns a recommendation while in auto mode
+function autoExecute() {
+  if (!G.autoMode || G.phase !== 'playing' || !G.aiRec) return;
+  G.autoTimer = setTimeout(() => {
+    if (!G.autoMode) return;
+    if (G.aiRec === 'hit') playerHit(); else playerStand();
+  }, actionDelay());
+}
+
+document.getElementById('auto-speed').addEventListener('input', function() {
+  document.getElementById('auto-speed-lbl').textContent = SPEED_LABELS[autoSpeedIdx()];
+});
 
 /* ============================================================
    AI AGENT
@@ -521,6 +597,7 @@ async function callAI() {
     setAI('result');
     updateStats();
     renderStratChart(); // update highlight
+    if (G.autoMode) autoExecute();
 
   } catch (err) {
     console.error('[AI] Error:', err);
@@ -586,10 +663,10 @@ function render() {
   // Buttons
   const playing = G.phase === 'playing';
   const dealing = G.phase === 'playing' || G.phase === 'reveal';
-  document.getElementById('btn-deal').disabled = dealing;
-  document.getElementById('btn-hit').disabled = !playing;
-  document.getElementById('btn-stand').disabled = !playing;
-  document.getElementById('btn-exec').disabled = !playing || !G.aiRec;
+  document.getElementById('btn-deal').disabled = dealing || G.autoMode;
+  document.getElementById('btn-hit').disabled = !playing || G.autoMode;
+  document.getElementById('btn-stand').disabled = !playing || G.autoMode;
+  document.getElementById('btn-exec').disabled = !playing || !G.aiRec || G.autoMode;
 }
 
 function setAI(state, msg) {
